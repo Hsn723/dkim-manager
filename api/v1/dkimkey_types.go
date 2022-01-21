@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// DKIMKeySpec defines the desired state of DKIMKey
+// DKIMKeySpec defines the desired state of DKIMKey.
 type DKIMKeySpec struct {
 	// SecretName represents the name for the Secret resource containing the private key.
 	SecretName string `json:"secretName"`
@@ -50,14 +50,14 @@ type DKIMKeySpec struct {
 	KeyType dkim.KeyType `json:"keyType,omitempty"`
 }
 
-// DKIMKeyStatus defines the observed state of DKIMKey
+// DKIMKeyStatus defines the observed state of DKIMKey.
 type DKIMKeyStatus struct {
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// DKIMKey is the Schema for the dkimkeys API
+// DKIMKey is the Schema for the dkimkeys API.
 type DKIMKey struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -68,7 +68,7 @@ type DKIMKey struct {
 
 //+kubebuilder:object:root=true
 
-// DKIMKeyList contains a list of DKIMKey
+// DKIMKeyList contains a list of DKIMKey.
 type DKIMKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
