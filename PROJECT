@@ -1,0 +1,16 @@
+domain: atelierhsn.com
+layout:
+- go.kubebuilder.io/v3
+projectName: dkim-manager
+repo: github.com/hsn723/dkim-manager
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: atelierhsn.com
+  group: dkim-manager
+  kind: DKIMKey
+  path: github.com/hsn723/dkim-manager/api/v1
+  version: v1
+version: "3"

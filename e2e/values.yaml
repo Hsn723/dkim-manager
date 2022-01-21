@@ -1,0 +1,4 @@
+image:
+  repository: dkim-manager
+  tag: dev
+  pullPolicy: Never

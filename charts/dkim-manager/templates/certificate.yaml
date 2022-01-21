@@ -1,0 +1,15 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ template "project.fullname" . }}-serving-cert
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "project.labels" . | nindent 4 }}
+spec:
+  dnsNames:
+    - {{ template "project.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc
+    - {{ template "project.fullname" . }}-webhook-service.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ template "project.fullname" . }}-selfsigned-issuer
+  secretName: webhook-server-cert

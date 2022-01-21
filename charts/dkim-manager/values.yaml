@@ -1,0 +1,26 @@
+image:
+  # image.repository -- dkim-manager image repository to use.
+  repository: ghcr.io/hsn723/dkim-manager
+
+  # image.tag -- dkim-manager image tag to use.
+  # @default -- `{{ .Chart.AppVersion }}`
+  tag:  # 0.1.0
+
+  # image.pullPolicy -- dkim-manager image pullPolicy.
+  pullPolicy:  # Always
+
+controller:
+  # controller.replicas -- Specify the number of replicas of the controller Pod.
+  replicas: 2
+
+  # controller.resources -- Specify resources.
+  resources:
+    requests:
+      cpu: 100m
+      memory: 20Mi
+
+  # controller.terminationGracePeriodSeconds -- Specify terminationGracePeriodSeconds.
+  terminationGracePeriodSeconds: 10
+
+  # controller.extraArgs -- Optional additional arguments.
+  extraArgs: ["--leader-elect"]

@@ -1,0 +1,64 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp: null
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-dkim-manager-atelierhsn-com-v1-dkimkey
+  failurePolicy: Fail
+  name: vdkimkey.kb.io
+  rules:
+  - apiGroups:
+    - dkim-manager.atelierhsn.com
+    apiVersions:
+    - v1
+    operations:
+    - UPDATE
+    resources:
+    - dkimkeys
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-externaldns-k8s-io-v1alpha1-dnsendpoint
+  failurePolicy: Fail
+  name: vdnsendpoint.kb.io
+  rules:
+  - apiGroups:
+    - externaldns.k8s.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - DELETE
+    resources:
+    - dnsendpoints
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-secret
+  failurePolicy: Fail
+  name: vsecret.kb.io
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - DELETE
+    resources:
+    - secrets
+  sideEffects: None
