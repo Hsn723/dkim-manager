@@ -1,0 +1,8 @@
+apiVersion: dkim-manager.atelierhsn.com/v1
+kind: DKIMKey
+metadata:
+  name: selector2
+spec:
+  secretName: selector2
+  selector: selector2
+  domain: example.com

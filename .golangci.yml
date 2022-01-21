@@ -1,0 +1,22 @@
+linters:
+  disable-all: true
+  enable:
+    - deadcode
+    - dupl
+    - errcheck
+    - forbidigo
+    - gocognit
+    - goconst
+    - gocyclo
+    - godot
+    - gosimple
+    - gofmt
+    - ineffassign
+    - revive
+    - staticcheck
+    - structcheck
+    - unparam
+    - unused
+    - varcheck
+run:
+  timeout: 5m

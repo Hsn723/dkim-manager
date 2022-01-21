@@ -1,0 +1,43 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - dkim-manager.atelierhsn.com
+  resources:
+  - dkimkeys
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - dkim-manager.atelierhsn.com
+  resources:
+  - dkimkeys/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - dkim-manager.atelierhsn.com
+  resources:
+  - dkimkeys/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - externaldns.k8s.io
+  resources:
+  - dnsendpoints
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - update

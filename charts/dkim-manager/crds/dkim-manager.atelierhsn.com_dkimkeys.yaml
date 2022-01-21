@@ -1,0 +1,99 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: $(CERTIFICATE_NAMESPACE)/$(CERTIFICATE_NAME)
+    controller-gen.kubebuilder.io/version: v0.8.0
+  labels:
+    app.kubernetes.io/name: dkim-manager
+  name: dkimkeys.dkim-manager.atelierhsn.com
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: webhook-service
+          namespace: system
+          path: /convert
+      conversionReviewVersions:
+      - v1
+  group: dkim-manager.atelierhsn.com
+  names:
+    kind: DKIMKey
+    listKind: DKIMKeyList
+    plural: dkimkeys
+    singular: dkimkey
+  scope: Namespaced
+  versions:
+  - name: v1
+    schema:
+      openAPIV3Schema:
+        description: DKIMKey is the Schema for the dkimkeys API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object. Servers should convert recognized schemas to the latest
+              internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents. Servers may infer this from the endpoint the client
+              submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DKIMKeySpec defines the desired state of DKIMKey
+            properties:
+              domain:
+                description: Domain is the domain to which the DKIM record will be
+                  associated.
+                type: string
+              keyLength:
+                default: 2048
+                description: KeyLength represents the bit size for RSA keys.
+                enum:
+                - 1024
+                - 2048
+                - 4096
+                type: integer
+              keyType:
+                default: rsa
+                description: KeyType represents the DKIM key type.
+                enum:
+                - rsa
+                - ed25519
+                type: string
+              secretName:
+                description: SecretName represents the name for the Secret resource
+                  containing the private key.
+                type: string
+              selector:
+                description: Selector is the name to use as a DKIM selector.
+                type: string
+              ttl:
+                default: 86400
+                description: TTL for the DKIM record.
+                type: integer
+            required:
+            - domain
+            - secretName
+            - selector
+            type: object
+          status:
+            description: DKIMKeyStatus defines the observed state of DKIMKey
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

@@ -1,0 +1,6 @@
+apiVersion: dkim-manager.atelierhsn.com/v1
+kind: DKIMKey
+metadata:
+  name: dkimkey-sample
+spec:
+  # TODO(user): Add fields here

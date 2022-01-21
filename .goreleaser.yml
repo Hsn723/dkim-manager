@@ -1,0 +1,62 @@
+project_name: dkim-manager
+dist: bin/
+before:
+  hooks:
+    - go mod download
+builds:
+  - env:
+      - CGO_ENABLED=0
+    main: ./cmd/dkim-manager
+    binary: dkim-manager
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+dockers:
+  - image_templates:
+    - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-amd64"
+    use: buildx
+    dockerfile: Dockerfile
+    extra_files:
+      - LICENSE
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+  - image_templates:
+    - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-arm64"
+    use: buildx
+    goarch: arm64
+    dockerfile: Dockerfile
+    extra_files:
+      - LICENSE
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+docker_manifests:
+  - name_template: "ghcr.io/hsn723/{{.ProjectName}}:latest"
+    image_templates:
+      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-amd64"
+      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-amd64"
+      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/hsn723/{{.ProjectName}}:{{ .Major }}.{{ .Minor }}"
+    image_templates:
+      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-amd64"
+      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-arm64"
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ .Tag }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'

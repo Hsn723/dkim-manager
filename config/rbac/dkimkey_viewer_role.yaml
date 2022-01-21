@@ -1,0 +1,22 @@
+# permissions for end users to view dkimkeys.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dkimkey-viewer-role
+  labels:
+    rbac.authorization.k8s.io/aggregate-to-view: "true"
+rules:
+- apiGroups:
+  - dkim-manager.atelierhsn.com
+  resources:
+  - dkimkeys
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - dkim-manager.atelierhsn.com
+  resources:
+  - dkimkeys/status
+  verbs:
+  - get
