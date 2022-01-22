@@ -1,7 +1,13 @@
 package e2e
 
 import (
+	"crypto/rsa"
+	"crypto/x509"
 	_ "embed"
+	"encoding/base64"
+	"encoding/pem"
+	"fmt"
+	"regexp"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo"
@@ -14,6 +20,8 @@ var (
 
 	//go:embed t/selector2_dkimkey.yaml
 	selector2YAML []byte
+
+	pubKeyPattern = regexp.MustCompile(`(p=)(\S+)`)
 )
 
 var _ = Describe("dkim-manager", func() {
@@ -34,6 +42,43 @@ var _ = Describe("dkim-manager", func() {
 		Eventually(func() error {
 			_, err := kubectl(nil, "get", "-n", namespace, "secret", "selector1")
 			return err
+		}).Should(Succeed())
+
+		By("checking the key pair")
+		Consistently(func() error {
+			record, err := kubectl(nil, "get", "-n", namespace, "dnsendpoint", "selector1", "-o", "jsonpath={.spec.endpoints[*].targets[*]}")
+			if err != nil {
+				return err
+			}
+			match := pubKeyPattern.FindStringSubmatch(string(record))
+			if len(match) != 3 {
+				return fmt.Errorf("unexpected DKIM record")
+			}
+			pubKey := match[2]
+
+			privKeyData, err := kubectl(nil, "get", "-n", namespace, "secret", "selector1", "-o", "go-template={{index .data \"example.com.selector1.key\"}}")
+			if err != nil {
+				return err
+			}
+			b := make([]byte, base64.StdEncoding.DecodedLen(len(privKeyData)))
+			_, err = base64.StdEncoding.Decode(b, privKeyData)
+			if err != nil {
+				return err
+			}
+			block, _ := pem.Decode(b)
+			privKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+			if err != nil {
+				return err
+			}
+			pubKeyBytes, err := x509.MarshalPKIXPublicKey(privKey.Public().(*rsa.PublicKey))
+			if err != nil {
+				return err
+			}
+			pubKeyStr := base64.StdEncoding.EncodeToString(pubKeyBytes)
+			if pubKeyStr != pubKey {
+				return fmt.Errorf("incorrect key pair")
+			}
+			return nil
 		}).Should(Succeed())
 	})
 
