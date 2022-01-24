@@ -18,7 +18,8 @@ import (
 
 type dnsEndpointValidator struct {
 	client.Client
-	dec *admission.Decoder
+	dec                *admission.Decoder
+	serviceAccountName string
 }
 
 var _ admission.Handler = &dnsEndpointValidator{}
@@ -41,10 +42,8 @@ func (v *dnsEndpointValidator) handleDelete(req admission.Request) admission.Res
 	owners := de.GetOwnerReferences()
 	for _, owner := range owners {
 		if owner.APIVersion == dkimmanagerv1.GroupVersion.String() && owner.Kind == dkimmanagerv1.DKIMKeyKind {
-			for _, g := range req.UserInfo.Groups {
-				if g == "system:serviceaccounts" {
-					return admission.Allowed("")
-				}
+			if req.UserInfo.Username == v.serviceAccountName {
+				return admission.Allowed("deletion by service account allowed")
 			}
 			return admission.Denied("directly deleting DKIM record is not allowed")
 		}
@@ -52,10 +51,11 @@ func (v *dnsEndpointValidator) handleDelete(req admission.Request) admission.Res
 	return admission.Allowed("")
 }
 
-func SetupDNSEndpointWebhook(mgr manager.Manager, dec *admission.Decoder) {
+func SetupDNSEndpointWebhook(mgr manager.Manager, dec *admission.Decoder, sa string) {
 	v := &dnsEndpointValidator{
-		Client: mgr.GetClient(),
-		dec:    dec,
+		Client:             mgr.GetClient(),
+		dec:                dec,
+		serviceAccountName: sa,
 	}
 	srv := mgr.GetWebhookServer()
 	srv.Register("/validate-externaldns-k8s-io-v1alpha1-dnsendpoint", &webhook.Admission{Handler: v})

@@ -18,6 +18,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"io/ioutil"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -32,11 +34,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
+	"github.com/golang-jwt/jwt/v4"
 	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
 	"github.com/hsn723/dkim-manager/controllers"
 	"github.com/hsn723/dkim-manager/hooks"
 	cacheclient "github.com/hsn723/dkim-manager/pkg/client"
 	//+kubebuilder:scaffold:imports
+)
+
+const (
+	fallbackServiceAccount = "system:serviceaccount:dkim-manager:dkim-manager-controller-manager"
 )
 
 var (
@@ -51,15 +58,36 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+func getServiceAccount() string {
+	data, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		setupLog.Error(err, "could not read token")
+		return fallbackServiceAccount
+	}
+	token, _, err := jwt.NewParser().ParseUnverified(string(data), &jwt.RegisteredClaims{})
+	if err != nil {
+		setupLog.Error(err, "could not parse token")
+		return fallbackServiceAccount
+	}
+	claims, ok := token.Claims.(*jwt.RegisteredClaims)
+	if !ok {
+		setupLog.Error(fmt.Errorf("invalid claims type"), "could not recognize claims")
+		return fallbackServiceAccount
+	}
+	return claims.Subject
+}
+
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
+	var serviceAccount string
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.StringVar(&serviceAccount, "service-account", getServiceAccount(), "The name of the service account.")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -98,8 +126,8 @@ func main() {
 	//+kubebuilder:scaffold:builder
 
 	hooks.SetupDKIMKeyWebhook(mgr, dec)
-	hooks.SetupDNSEndpointWebhook(mgr, dec)
-	hooks.SetupSecretWebhook(mgr, dec)
+	hooks.SetupDNSEndpointWebhook(mgr, dec, serviceAccount)
+	hooks.SetupSecretWebhook(mgr, dec, serviceAccount)
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
