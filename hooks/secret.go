@@ -18,7 +18,8 @@ import (
 
 type secretValidator struct {
 	client.Client
-	dec *admission.Decoder
+	dec                *admission.Decoder
+	serviceAccountName string
 }
 
 var _ admission.Handler = &secretValidator{}
@@ -41,10 +42,8 @@ func (v *secretValidator) handleDelete(req admission.Request) admission.Response
 	owners := s.GetOwnerReferences()
 	for _, owner := range owners {
 		if owner.APIVersion == dkimmanagerv1.GroupVersion.String() && owner.Kind == "DKIMKey" {
-			for _, g := range req.UserInfo.Groups {
-				if g == "system:serviceaccounts" {
-					return admission.Allowed("")
-				}
+			if req.UserInfo.Username == v.serviceAccountName {
+				return admission.Allowed("deletion by service account allowed")
 			}
 			return admission.Denied("directly deleting DKIM private keys is not allowed")
 		}
@@ -52,10 +51,11 @@ func (v *secretValidator) handleDelete(req admission.Request) admission.Response
 	return admission.Allowed("")
 }
 
-func SetupSecretWebhook(mgr manager.Manager, dec *admission.Decoder) {
+func SetupSecretWebhook(mgr manager.Manager, dec *admission.Decoder, sa string) {
 	v := &secretValidator{
-		Client: mgr.GetClient(),
-		dec:    dec,
+		Client:             mgr.GetClient(),
+		dec:                dec,
+		serviceAccountName: sa,
 	}
 	srv := mgr.GetWebhookServer()
 	srv.Register("/validate-secret", &webhook.Admission{Handler: v})
