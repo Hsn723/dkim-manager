@@ -77,9 +77,9 @@ crds:
 test: manifests generate fmt vet crds setup-envtest ## Run tests.
 	go test -v -count 1 -race ./pkg/... -coverprofile pkg-cover.out
 	source <($(SETUP_ENVTEST) use -p env); \
-		go test -v -count 1 -race ./controllers -ginkgo.progress -ginkgo.v -ginkgo.failFast -coverprofile controllers-cover.out
+		go test -v -count 1 -race ./controllers -ginkgo.progress -ginkgo.v -ginkgo.fail-fast -coverprofile controllers-cover.out
 	source <($(SETUP_ENVTEST) use -p env); \
-		go test -v -count 1 -race ./hooks -ginkgo.progress -ginkgo.v -ginkgo.failFast -coverprofile hooks-cover.out
+		go test -v -count 1 -race ./hooks -ginkgo.progress -ginkgo.v -ginkgo.fail-fast -coverprofile hooks-cover.out
 
 ##@ Build
 
