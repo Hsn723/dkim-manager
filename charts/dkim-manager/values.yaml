@@ -24,3 +24,21 @@ controller:
 
   # controller.extraArgs -- Optional additional arguments.
   extraArgs: ["--leader-elect"]
+
+namespaced: true
+
+external-dns:
+  enabled: false
+  serviceAccount:
+    create: false
+  rbac:
+    create: false
+  env: []
+  sources:
+    - crd
+  logFormat: json
+  txtPrefix: dkim-manager
+  extraArgs:
+    - --crd-source-apiversion=externaldns.k8s.io/v1alpha1
+    - --crd-source-kind=DNSEndpoint
+    - --managed-record-types=TXT

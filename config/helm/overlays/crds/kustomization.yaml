@@ -3,3 +3,9 @@ resources:
 
 commonLabels:
   app.kubernetes.io/name: dkim-manager
+
+patchesStrategicMerge:
+  - conversion-patch.yaml
+
+transformers:
+  - label-transformer.yaml

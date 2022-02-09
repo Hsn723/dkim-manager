@@ -1,5 +1,4 @@
 resources:
-  - ../../../rbac
   - ../../../webhook
 
 namespace: '{{ .Release.Namespace }}'
