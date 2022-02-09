@@ -19,6 +19,19 @@ When sending mail from inside a Kubernetes cluster, you might want to sign outgo
 
 It is recommended to create a delegated subdomain for the sole purpose of storing DKIM records (eg: `dkim.example.com`) and grant `external-dns` only permission on that subdomain. See [this blog](https://atelierhsn.com/2022/01/cert-manager-done-right/) for more details why.
 
+## Installation
+`dkim-manager` requires `cert-manager` and `external-dns` to be installed first. The [helm installation instructions](charts/dkim-manager/README.md) are a good place to get started. If installing `external-dns` separately, not that the following arguments should be set for `dkim-manager` to be able to register TXT records:
+
+```yaml
+- --source=crd
+- --crd-source-apiversion=externaldns.k8s.io/v1alpha1
+- --crd-source-kind=DNSEndpoint
+- --managed-record-types=TXT
+- --txtPrefix= #some non-empty string
+```
+
+Additionally, it is recommended to set `--domainFilter` to restrict the scope of operation of `external-dns` to the domain for which you want to create DKIM keys, and to set `--namespace=YOUR_NAMESPACE` so that `external-dns` only looks at resources inside your namespace. Doing so allows you to use `external-dns` for the sole purpose of registering DKIM TXT records.
+
 ## Usage
 DKIM keys can be requested by creating a `DKIMKey` resource.
 

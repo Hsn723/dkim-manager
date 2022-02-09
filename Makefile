@@ -46,10 +46,12 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: kustomize controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: kustomize helm controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
-	$(KUSTOMIZE) build config/helm/overlays/crds > charts/dkim-manager/crds/dkim-manager.atelierhsn.com_dkimkeys.yaml
+	$(KUSTOMIZE) build config/helm/overlays/crds > charts/dkim-manager/templates/generated/crds/dkim-manager.atelierhsn.com_dkimkeys.yaml
 	$(KUSTOMIZE) build config/helm/overlays/templates > charts/dkim-manager/templates/generated/generated.yaml
+	sed -i "s/\(appVersion: \)[0-9]\+\.[0-9]\+\.[0-9]\+/\1$$(cat VERSION)/" charts/dkim-manager/Chart.yaml
+	$(HELM) dependency update charts/dkim-manager
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -71,7 +73,7 @@ lint:
 
 crds:
 	mkdir -p config/crd/third-party
-	curl -fsL -o config/crd/third-party/dnsendpoint.yaml -sLf https://raw.githubusercontent.com/kubernetes-sigs/external-dns/v$(EXTERNAL_DNS_VERSION)/docs/contributing/crd-source/crd-manifest.yaml
+	curl -o config/crd/third-party/dnsendpoint.yaml -sLf https://raw.githubusercontent.com/kubernetes-sigs/external-dns/v$(EXTERNAL_DNS_VERSION)/docs/contributing/crd-source/crd-manifest.yaml
 
 .PHONY: test
 test: manifests generate fmt vet crds setup-envtest ## Run tests.
@@ -158,12 +160,12 @@ rm -rf $$TMP_DIR ;\
 }
 endef
 
-.PHONY: setup-container-structure-test
-setup-container-structure-test:
+CONTAINER_STRUCTURE_TEST = $(BINDIR)/container-structure-test
+$(CONTAINER_STRUCTURE_TEST):
 	if [ -z "$(shell which container-structure-test)" ]; then \
 		curl -LO https://storage.googleapis.com/container-structure-test/v$(CST_VERSION)/container-structure-test-linux-amd64 && mv container-structure-test-linux-amd64 container-structure-test && chmod +x container-structure-test && sudo mv container-structure-test /usr/local/bin/; \
 	fi
 
 .PHONY: container-structure-test
-container-structure-test: setup-container-structure-test
-	printf "amd64\narm64" | xargs -n1 -I {} container-structure-test test --image ghcr.io/hsn723/dkim-manager:$(shell git describe --tags --abbrev=0 || echo v0.0.0)-next-{} --config cst.yaml
+container-structure-test: $(CONTAINER_STRUCTURE_TEST)
+	printf "amd64\narm64" | xargs -n1 -I {} container-structure-test test --image ghcr.io/hsn723/dkim-manager:$(shell git describe --tags --abbrev=0 --match "v*" || echo v0.0.0)-next-{} --config cst.yaml
