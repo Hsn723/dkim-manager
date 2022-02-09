@@ -97,7 +97,8 @@ func (r *DKIMKeyReconciler) finalize(ctx context.Context, dk *dkimmanagerv1.DKIM
 	}
 	logger := log.FromContext(ctx)
 	del := externaldns.DNSEndpointList()
-	if err := r.List(ctx, del); client.IgnoreNotFound(err) != nil {
+	lo := &client.ListOptions{Namespace: dk.Namespace}
+	if err := r.List(ctx, del, lo); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 	for _, de := range del.Items {
@@ -109,7 +110,7 @@ func (r *DKIMKeyReconciler) finalize(ctx context.Context, dk *dkimmanagerv1.DKIM
 		}
 	}
 	ss := &corev1.SecretList{}
-	if err := r.List(ctx, ss); err != nil {
+	if err := r.List(ctx, ss, lo); err != nil {
 		return err
 	}
 	for _, s := range ss.Items {
