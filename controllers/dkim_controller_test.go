@@ -2,12 +2,14 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,6 +35,14 @@ func getSecret(ctx context.Context, name, namespace string) error {
 		Namespace: namespace,
 	}
 	return k8sClient.Get(ctx, key, s)
+}
+
+func shouldCreateNamespace(ctx context.Context, namespace string) {
+	By("creating namespace")
+	err := k8sClient.Create(ctx, &corev1.Namespace{
+		ObjectMeta: v1.ObjectMeta{Name: namespace},
+	})
+	Expect(err).NotTo(HaveOccurred())
 }
 
 var _ = Describe("DKIMKey controller", func() {
@@ -73,11 +83,68 @@ var _ = Describe("DKIMKey controller", func() {
 	It("should create DNSEndpoint and Secret", func() {
 		name := uuid.NewString()
 		namespace := uuid.NewString()
-		err := k8sClient.Create(ctx, &corev1.Namespace{
-			ObjectMeta: v1.ObjectMeta{Name: namespace},
-		})
+		shouldCreateNamespace(ctx, namespace)
+
+		By("creating DKIMKey")
+		dk := &dkimmanagerv1.DKIMKey{}
+		dk.SetName(name)
+		dk.SetNamespace(namespace)
+		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+			SecretName: name,
+			Selector:   "selector1",
+			Domain:     "atelierhsn.com",
+			TTL:        3600,
+			KeyLength:  dkim.KeyLength2048,
+			KeyType:    dkim.KeyTypeRSA,
+		}
+
+		err := k8sClient.Create(ctx, dk)
 		Expect(err).NotTo(HaveOccurred())
 
+		Eventually(func() error {
+			return getSecret(ctx, name, namespace)
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			return getDNSEndpoint(ctx, name, namespace)
+		}).Should(Succeed())
+
+		Consistently(func() error {
+			return getSecret(ctx, name, namespace)
+		}).Should(Succeed())
+
+		Consistently(func() error {
+			return getDNSEndpoint(ctx, name, namespace)
+		}).Should(Succeed())
+
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusOK))
+	})
+
+	It("should give up early when DNSEndpoint already exists", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+
+		By("creating dummy DNSEndpoint")
+		de := externaldns.DNSEndpoint()
+		de.SetName(name)
+		de.SetNamespace(namespace)
+		dummyData := map[string]interface{}{
+			"endpoints": []map[string]interface{}{
+				{
+					"dnsName":    "dummy",
+					"recordType": "TXT",
+					"targets":    []string{"dummy"},
+				},
+			},
+		}
+		de.UnstructuredContent()["spec"] = dummyData
+		err := k8sClient.Create(ctx, de)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("creating DKIMKey")
 		dk := &dkimmanagerv1.DKIMKey{}
 		dk.SetName(name)
 		dk.SetNamespace(namespace)
@@ -92,22 +159,74 @@ var _ = Describe("DKIMKey controller", func() {
 
 		err = k8sClient.Create(ctx, dk)
 		Expect(err).NotTo(HaveOccurred())
-
-		Eventually(func() error {
-			return getSecret(ctx, name, namespace)
-		}).Should(Succeed())
-
-		Eventually(func() error {
-			return getDNSEndpoint(ctx, name, namespace)
-		}).Should(Succeed())
-
 		Consistently(func() error {
 			return getSecret(ctx, name, namespace)
+		}).ShouldNot(Succeed())
+		Consistently(func() error {
+			cde := externaldns.DNSEndpoint()
+			err := k8sClient.Get(ctx, client.ObjectKeyFromObject(de), cde)
+			if err != nil {
+				return err
+			}
+			if !equality.Semantic.DeepEqual(cde.UnstructuredContent()["spec"], de.UnstructuredContent()["spec"]) {
+				return fmt.Errorf("data has been modified. got: %v, expected %v", cde.UnstructuredContent()["spec"], de.UnstructuredContent()["spec"])
+			}
+			return nil
 		}).Should(Succeed())
 
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusInvalid))
+	})
+
+	It("should give up early when Secret already exists", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+
+		By("creating dummy Secret")
+		s := &corev1.Secret{}
+		s.SetName(name)
+		s.SetNamespace(namespace)
+		dummyData := map[string][]byte{
+			"dummy": []byte("dummy"),
+		}
+		s.Data = dummyData
+		err := k8sClient.Create(ctx, s)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("creating DKIMKey")
+		dk := &dkimmanagerv1.DKIMKey{}
+		dk.SetName(name)
+		dk.SetNamespace(namespace)
+		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+			SecretName: name,
+			Selector:   "selector1",
+			Domain:     "atelierhsn.com",
+			TTL:        3600,
+			KeyLength:  dkim.KeyLength2048,
+			KeyType:    dkim.KeyTypeRSA,
+		}
+
+		err = k8sClient.Create(ctx, dk)
+		Expect(err).NotTo(HaveOccurred())
 		Consistently(func() error {
 			return getDNSEndpoint(ctx, name, namespace)
+		}).ShouldNot(Succeed())
+		Consistently(func() error {
+			err := k8sClient.Get(ctx, client.ObjectKeyFromObject(s), s)
+			if err != nil {
+				return err
+			}
+			if !equality.Semantic.DeepEqual(s.Data, dummyData) {
+				return fmt.Errorf("data has been modified")
+			}
+			return nil
 		}).Should(Succeed())
+
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusInvalid))
 	})
 
 	It("should cascade delete generated resources", func() {
@@ -119,6 +238,7 @@ var _ = Describe("DKIMKey controller", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
+		By("creating DKIMKey")
 		dk := &dkimmanagerv1.DKIMKey{}
 		dk.SetName(name)
 		dk.SetNamespace(namespace)
@@ -178,6 +298,7 @@ var _ = Describe("DKIMKey controller", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 
+		By("creating DKIMKeys")
 		dk := &dkimmanagerv1.DKIMKey{}
 		dk.SetName(dk1Name)
 		dk.SetNamespace(namespace)
@@ -222,6 +343,7 @@ var _ = Describe("DKIMKey controller", func() {
 			return nil
 		}).Should(Succeed())
 
+		By("deleting DKIMKey")
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -243,5 +365,125 @@ var _ = Describe("DKIMKey controller", func() {
 		Consistently(func() error {
 			return getDNSEndpoint(ctx, dk2Name, namespace)
 		}).Should(Succeed())
+	})
+})
+
+var _ = Describe("DKIMKey controller namespaced", func() {
+	ctx := context.Background()
+	var stopFunc func()
+	observedNamespace := uuid.NewString()
+
+	BeforeEach(func() {
+		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+			Scheme:             scheme,
+			LeaderElection:     false,
+			MetricsBindAddress: "0",
+		})
+		Expect(err).NotTo(HaveOccurred())
+		reconciler := &DKIMKeyReconciler{
+			Client:    mgr.GetClient(),
+			Scheme:    mgr.GetScheme(),
+			Log:       ctrl.Log.WithName("controllers").WithName("DKIMKey"),
+			Namespace: observedNamespace,
+		}
+		err = reconciler.SetupWithManager(mgr)
+		Expect(err).NotTo(HaveOccurred())
+
+		ctx, cancel := context.WithCancel(ctx)
+		stopFunc = cancel
+		go func() {
+			err := mgr.Start(ctx)
+			if err != nil {
+				panic(err)
+			}
+		}()
+		time.Sleep(100 * time.Millisecond)
+	})
+
+	AfterEach(func() {
+		stopFunc()
+		time.Sleep(100 * time.Millisecond)
+	})
+
+	It("should reconcile resources in watched namespace", func() {
+		name := uuid.NewString()
+		namespace := observedNamespace
+		err := k8sClient.Create(ctx, &corev1.Namespace{
+			ObjectMeta: v1.ObjectMeta{Name: namespace},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("creating DKIMKey")
+		dk := &dkimmanagerv1.DKIMKey{}
+		dk.SetName(name)
+		dk.SetNamespace(namespace)
+		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+			SecretName: name,
+			Selector:   "selector1",
+			Domain:     "atelierhsn.com",
+			TTL:        3600,
+			KeyLength:  dkim.KeyLength2048,
+			KeyType:    dkim.KeyTypeRSA,
+		}
+
+		err = k8sClient.Create(ctx, dk)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func() error {
+			return getSecret(ctx, name, namespace)
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			return getDNSEndpoint(ctx, name, namespace)
+		}).Should(Succeed())
+
+		Consistently(func() error {
+			return getSecret(ctx, name, namespace)
+		}).Should(Succeed())
+
+		Consistently(func() error {
+			return getDNSEndpoint(ctx, name, namespace)
+		}).Should(Succeed())
+
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusOK))
+	})
+
+	It("should ignore resources in invalid namespaces", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		err := k8sClient.Create(ctx, &corev1.Namespace{
+			ObjectMeta: v1.ObjectMeta{Name: namespace},
+		})
+		Expect(err).NotTo(HaveOccurred())
+
+		By("creating DKIMKey")
+		dk := &dkimmanagerv1.DKIMKey{}
+		dk.SetName(name)
+		dk.SetNamespace(namespace)
+		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+			SecretName: name,
+			Selector:   "selector1",
+			Domain:     "atelierhsn.com",
+			TTL:        3600,
+			KeyLength:  dkim.KeyLength2048,
+			KeyType:    dkim.KeyTypeRSA,
+		}
+
+		err = k8sClient.Create(ctx, dk)
+		Expect(err).NotTo(HaveOccurred())
+
+		Consistently(func() error {
+			return getSecret(ctx, name, namespace)
+		}).ShouldNot(Succeed())
+
+		Consistently(func() error {
+			return getDNSEndpoint(ctx, name, namespace)
+		}).ShouldNot(Succeed())
+
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusInvalid))
 	})
 })

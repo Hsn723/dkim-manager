@@ -28,6 +28,11 @@ spec:
             {{- range .Values.controller.extraArgs }}
             - {{ . }}
             {{- end }}
+            {{- if .Values.namespace }}
+            - --namespace={{ .Values.namespace }}
+            {{- else if .Values.namespaced }}
+            - --namespaced
+            {{- end }}
           ports:
             - containerPort: 9443
               name: webhook-server
