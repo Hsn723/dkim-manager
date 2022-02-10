@@ -25,6 +25,9 @@ controller:
   # controller.extraArgs -- Optional additional arguments.
   extraArgs: ["--leader-elect"]
 
+namespaced: false
+namespace: ""
+
 external-dns:
   enabled: false
   serviceAccount:

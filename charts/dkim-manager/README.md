@@ -42,6 +42,8 @@ helm install --create-namespace --namespace dkim-manager dkim-manager -f values.
 | controller.resources | object | `{"requests":{"cpu":100m,"memory":"20Mi"}}` | Resources requested for controller Pod |
 | controller.terminationGracePeriodSeconds | int | `10` | terminationGracePeriodSeconds for the controller Pod |
 | controller.extraArgs | list | `["--leader-elect"]` | Additional arguments for the controller |
+| namespaced | bool | `false` | Only look for DKIMKeys in the same namespace |
+| namespace | string | `""` | Specify namespace in which to look for DKIMKeys |
 | external-dns.enabled | bool | `false` | Also deploy the `external-dns` chart bundled for convenience |
 | external-dns | object | | Custom values for the external-dns chart |
 

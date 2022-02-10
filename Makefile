@@ -46,11 +46,14 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: manifests
-manifests: kustomize helm controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+manifests: kustomize controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	$(KUSTOMIZE) build config/helm/overlays/crds > charts/dkim-manager/templates/generated/crds/dkim-manager.atelierhsn.com_dkimkeys.yaml
 	$(KUSTOMIZE) build config/helm/overlays/templates > charts/dkim-manager/templates/generated/generated.yaml
 	sed -i "s/\(appVersion: \)[0-9]\+\.[0-9]\+\.[0-9]\+/\1$$(cat VERSION)/" charts/dkim-manager/Chart.yaml
+
+.PHONY: update-external-dns
+update-external-dns: helm
 	$(HELM) dependency update charts/dkim-manager
 
 .PHONY: generate

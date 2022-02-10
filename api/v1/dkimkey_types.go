@@ -54,7 +54,8 @@ type DKIMKeySpec struct {
 type DKIMKeyStatus string
 
 const (
-	DKIMKeyStatusOK = DKIMKeyStatus("ok")
+	DKIMKeyStatusOK      = DKIMKeyStatus("ok")
+	DKIMKeyStatusInvalid = DKIMKeyStatus("invalid")
 )
 
 //+kubebuilder:object:root=true
