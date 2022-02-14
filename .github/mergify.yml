@@ -1,9 +1,14 @@
 pull_request_rules:
   - name: Automatic merge
     conditions:
-      - "#approved-reviews-by>=1"
-      - "#review-requested=0"
-      - "#changes-requested-reviews-by=0"
+      - or:
+        - and:
+          - "#approved-reviews-by>=1"
+          - "#review-requested=0"
+          - "#changes-requested-reviews-by=0"
+        - and:
+          - author~=^dependabot\[bot\]$
+          - title~=^Bump [^\s]+ from ([\d]+)\.([\d]+)\..+ to \1\.\2\.
     actions:
         merge:
           method: squash
