@@ -1,0 +1,4 @@
+target-branch: master
+validate-maintainers: false
+check-version-increment: false
+chart-repos: external-dns=https://kubernetes-sigs.github.io/external-dns
