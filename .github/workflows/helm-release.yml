@@ -21,6 +21,10 @@ jobs:
         uses: azure/setup-helm@v1
         with:
           version: v3.7.1
+      - name: Manually add dependencies
+        run: |
+          helm repo add external-dns https://kubernetes-sigs.github.io/external-dns
+          helm repo update
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.3.0
         env:
