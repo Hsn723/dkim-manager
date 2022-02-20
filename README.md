@@ -1,7 +1,10 @@
-[![GitHub release](https://img.shields.io/github/release/hsn723/dkim-manager.svg?maxAge=60)](https://github.com/hsn723/dkim-manager/releases)
+[![GitHub release](https://img.shields.io/github/release/hsn723/dkim-manager.svg?sort=semver&maxAge=60)](https://github.com/hsn723/dkim-manager/releases)
+[![Helm release](https://img.shields.io/badge/dynamic/yaml.svg?label=chart&url=https://hsn723.github.io/dkim-manager/index.yaml&query=$.entries[%22dkim-manager%22][0].version&colorB=orange&logo=helm)](https://github.com/hsn723/dkim-manager/releases)
+[![Artifact Hub](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/dkim-manager)](https://artifacthub.io/packages/search?repo=dkim-manager)
 [![main](https://github.com/Hsn723/dkim-manager/actions/workflows/main.yml/badge.svg?branch=master)](https://github.com/Hsn723/dkim-manager/actions/workflows/main.yml)
 [![PkgGoDev](https://pkg.go.dev/badge/github.com/hsn723/dkim-manager?tab=overview)](https://pkg.go.dev/github.com/hsn723/dkim-manager?tab=overview)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hsn723/dkim-manager)](https://goreportcard.com/report/github.com/hsn723/dkim-manager)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/hsn723/dkim-manager)
 
 # dkim-manager
 `dkim-manager` is a Kubernetes controller for creating DKIM keys.
