@@ -102,7 +102,7 @@ var _ = Describe("dkim-manager", func() {
 		}).Should(Succeed())
 
 		By("deleting DKIMKey")
-		kubectlSafe(nil, "delete", "-n", namespace, "dkimkey", "selector1")
+		kubectlSafe(nil, "delete", "-n", namespace, "dkimkey", "selector1", "--cascade=foreground")
 
 		Eventually(func() error {
 			_, err := kubectl(nil, "get", "-n", namespace, "dnsendpoint", "selector1")

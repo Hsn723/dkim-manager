@@ -57,9 +57,10 @@ var _ = Describe("DKIMKey controller", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 		reconciler := &DKIMKeyReconciler{
-			Client: mgr.GetClient(),
-			Scheme: mgr.GetScheme(),
-			Log:    ctrl.Log.WithName("controllers").WithName("DKIMKey"),
+			Client:     mgr.GetClient(),
+			Scheme:     mgr.GetScheme(),
+			Log:        ctrl.Log.WithName("controllers").WithName("DKIMKey"),
+			ReadClient: mgr.GetAPIReader(),
 		}
 		err = reconciler.SetupWithManager(mgr)
 		Expect(err).NotTo(HaveOccurred())
@@ -381,10 +382,11 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 		})
 		Expect(err).NotTo(HaveOccurred())
 		reconciler := &DKIMKeyReconciler{
-			Client:    mgr.GetClient(),
-			Scheme:    mgr.GetScheme(),
-			Log:       ctrl.Log.WithName("controllers").WithName("DKIMKey"),
-			Namespace: observedNamespace,
+			Client:     mgr.GetClient(),
+			Scheme:     mgr.GetScheme(),
+			Log:        ctrl.Log.WithName("controllers").WithName("DKIMKey"),
+			Namespace:  observedNamespace,
+			ReadClient: mgr.GetAPIReader(),
 		}
 		err = reconciler.SetupWithManager(mgr)
 		Expect(err).NotTo(HaveOccurred())

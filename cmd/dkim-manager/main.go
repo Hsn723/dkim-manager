@@ -93,6 +93,7 @@ func main() {
 	var serviceAccount string
 	var namespace string
 	var namespaced bool
+	var webhooksEnabled bool
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
@@ -101,6 +102,7 @@ func main() {
 	flag.StringVar(&serviceAccount, "service-account", getServiceAccount(), "The name of the service account.")
 	flag.StringVar(&namespace, "namespace", "", "The namespace the controller should manage.")
 	flag.BoolVar(&namespaced, "namespaced", false, "Only manage resources in the same namespace as the controller. The --namespace parameter, if defined, takes precedence.")
+	flag.BoolVar(&webhooksEnabled, "webhooks", true, "Enable webhooks")
 	opts := zap.Options{
 		Development: true,
 	}
@@ -133,19 +135,22 @@ func main() {
 	}
 
 	if err := (&controllers.DKIMKeyReconciler{
-		Client:    mgr.GetClient(),
-		Log:       ctrl.Log.WithName("controllers").WithName("DKIMKey"),
-		Scheme:    mgr.GetScheme(),
-		Namespace: namespace,
+		Client:     mgr.GetClient(),
+		Log:        ctrl.Log.WithName("controllers").WithName("DKIMKey"),
+		Scheme:     mgr.GetScheme(),
+		Namespace:  namespace,
+		ReadClient: mgr.GetAPIReader(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DKIMKey")
 		os.Exit(1)
 	}
 	//+kubebuilder:scaffold:builder
 
-	hooks.SetupDKIMKeyWebhook(mgr, dec)
-	hooks.SetupDNSEndpointWebhook(mgr, dec, serviceAccount)
-	hooks.SetupSecretWebhook(mgr, dec, serviceAccount)
+	if webhooksEnabled {
+		hooks.SetupDKIMKeyWebhook(mgr, dec)
+		hooks.SetupDNSEndpointWebhook(mgr, dec, serviceAccount)
+		hooks.SetupSecretWebhook(mgr, dec, serviceAccount)
+	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		setupLog.Error(err, "unable to set up health check")
