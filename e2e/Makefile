@@ -11,21 +11,30 @@ KIND_CONFIG = kind-config.yaml
 KUBECONFIG = $(shell pwd)/.kubeconfig
 export KUBECTL KUBECONFIG
 
-.PHONY: start
-start: $(HELM) $(KIND) $(KUBECTL) crds
+.PHONY: start-kind
+start-kind:
 	$(KIND) create cluster --name=$(PROJECT_NAME) --config=$(KIND_CONFIG) --image=kindest/node:v$(KUBERNETES_VERSION) --wait 1m
+
+.PHONY: deploy
+deploy:
 	cd ..; CGO_ENABLED=0 go build -o dkim-manager -ldflags="-w -s" cmd/dkim-manager/main.go
 	cd ..; docker build --no-cache -t $(PROJECT_NAME):dev .
 	$(KIND) load docker-image $(PROJECT_NAME):dev --name=$(PROJECT_NAME)
+
+.PHONY: bootstrap
+bootstrap:
 	$(KUBECTL) apply -f https://github.com/jetstack/cert-manager/releases/download/v$(CERT_MANAGER_VERSION)/cert-manager.yaml
 	$(KUBECTL) -n cert-manager wait --for=condition=available --timeout=180s --all deployments
 	$(HELM) install --create-namespace --namespace $(PROJECT_NAME) $(PROJECT_NAME) ../charts/$(PROJECT_NAME) -f values.yaml
 	$(KUBECTL) -n $(PROJECT_NAME) wait --for=condition=available --timeout=180s --all deployments
 	$(KUBECTL) apply -f ../config/crd/third-party/dnsendpoint.yaml
 
+.PHONY: start
+start: $(HELM) $(KIND) $(KUBECTL) crds start-kind deploy bootstrap
+
 .PHONY: test
 test:
-	env PATH=$$(pwd)/../bin:$$PATH RUN_E2E=1 \
+	env PATH="$$(pwd)/../bin:$$PATH" RUN_E2E=1 \
 		go test -v -race . -ginkgo.progress -ginkgo.v -ginkgo.fail-fast
 
 .PHONY: stop

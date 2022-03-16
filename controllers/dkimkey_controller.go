@@ -46,6 +46,8 @@ type DKIMKeyReconciler struct {
 	Log       logr.Logger
 	Scheme    *runtime.Scheme
 	Namespace string
+	// workaround for https://github.com/kubernetes-sigs/controller-runtime/issues/550
+	ReadClient client.Reader
 }
 
 //+kubebuilder:rbac:groups=dkim-manager.atelierhsn.com,resources=dkimkeys,verbs=get;list;watch;create;update;patch;delete
@@ -109,7 +111,7 @@ func (r *DKIMKeyReconciler) finalize(ctx context.Context, dk *dkimmanagerv1.DKIM
 	logger := log.FromContext(ctx)
 	del := externaldns.DNSEndpointList()
 	lo := &client.ListOptions{Namespace: dk.Namespace}
-	if err := r.List(ctx, del, lo); client.IgnoreNotFound(err) != nil {
+	if err := r.ReadClient.List(ctx, del, lo); client.IgnoreNotFound(err) != nil {
 		return err
 	}
 	for _, de := range del.Items {
@@ -121,7 +123,7 @@ func (r *DKIMKeyReconciler) finalize(ctx context.Context, dk *dkimmanagerv1.DKIM
 		}
 	}
 	ss := &corev1.SecretList{}
-	if err := r.List(ctx, ss, lo); err != nil {
+	if err := r.ReadClient.List(ctx, ss, lo); err != nil {
 		return err
 	}
 	for _, s := range ss.Items {
@@ -178,7 +180,7 @@ func (r *DKIMKeyReconciler) checkForExistingResources(ctx context.Context, dk *d
 		Namespace: dk.Namespace,
 		Name:      dk.Name,
 	}
-	if err := r.Get(ctx, deKey, de); !apierrors.IsNotFound(err) {
+	if err := r.ReadClient.Get(ctx, deKey, de); !apierrors.IsNotFound(err) {
 		return fmt.Errorf("a DKIM record with the same name already exists")
 	}
 	s := &corev1.Secret{}
@@ -186,7 +188,7 @@ func (r *DKIMKeyReconciler) checkForExistingResources(ctx context.Context, dk *d
 		Namespace: dk.Namespace,
 		Name:      dk.Spec.SecretName,
 	}
-	if err := r.Get(ctx, sKey, s); !apierrors.IsNotFound(err) {
+	if err := r.ReadClient.Get(ctx, sKey, s); !apierrors.IsNotFound(err) {
 		return fmt.Errorf("a secret key with the same name already exists")
 	}
 	return nil
