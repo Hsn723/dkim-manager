@@ -8,6 +8,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
@@ -50,7 +51,8 @@ var _ = Describe("dkim-manager", func() {
 			if err != nil {
 				return err
 			}
-			match := pubKeyPattern.FindStringSubmatch(string(record))
+			trimmedRecord := strings.ReplaceAll(strings.ReplaceAll(string(record), " ", ""), "\"", "")
+			match := pubKeyPattern.FindStringSubmatch(string(trimmedRecord))
 			if len(match) != 3 {
 				return fmt.Errorf("unexpected DKIM record")
 			}

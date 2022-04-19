@@ -8,6 +8,7 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
+	"strings"
 )
 
 type KeyLength uint
@@ -64,12 +65,34 @@ func GenED25519() ([]byte, string, error) {
 
 // GenTXTValue generates the DKIM record for the given public key.
 func GenTXTValue(pub string, keyType KeyType) string {
+	res := []string{}
+	p := fmt.Sprintf("p=%s", pub)
 	switch keyType {
 	case KeyTypeRSA:
-		return fmt.Sprintf("v=DKIM1; h=sha256; k=%s; p=%s", keyType, pub)
+		res = append(res, fmt.Sprintf("\"v=DKIM1; h=sha256; k=%s;\"", keyType))
 	case KeyTypeED25519:
-		return fmt.Sprintf("v=DKIM1; k=%s; p=%s", keyType, pub)
+		res = append(res, fmt.Sprintf("\"v=DKIM1; k=%s;\"", keyType))
 	default:
 		return ""
 	}
+
+	res = append(res, splitKey(p)...)
+
+	return strings.Join(res, " ")
+}
+
+func splitKey(pub string) []string {
+	var res []string
+	parts := len(pub) / 255
+	remainder := len(pub) % 255
+	if parts < 1 {
+		return []string{"\"" + pub + "\""}
+	}
+	for i := 0; i < parts; i++ {
+		res = append(res, "\""+pub[i*255:(i+1)*255]+"\"")
+	}
+	if remainder > 0 {
+		res = append(res, "\""+pub[parts*255:parts*255+remainder]+"\"")
+	}
+	return res
 }
