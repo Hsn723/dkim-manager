@@ -26,7 +26,7 @@ jobs:
           helm repo add external-dns https://kubernetes-sigs.github.io/external-dns
           helm repo update
       - name: Run chart-releaser
-        uses: helm/chart-releaser-action@v1.4.0
+        uses: helm/chart-releaser-action@v1.4.1
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CR_RELEASE_NAME_TEMPLATE: "helm-v{{ .Version }}"
