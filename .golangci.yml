@@ -1,7 +1,6 @@
 linters:
   disable-all: true
   enable:
-    - deadcode
     - dupl
     - errcheck
     - forbidigo
@@ -14,9 +13,7 @@ linters:
     - ineffassign
     - revive
     - staticcheck
-    - structcheck
     - unparam
     - unused
-    - varcheck
 run:
   timeout: 5m
