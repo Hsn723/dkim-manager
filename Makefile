@@ -2,10 +2,11 @@
 # Image URL to use all building/pushing image targets
 IMG ?= ghcr.io/hsn723/dkim-manager:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+CONTROLLER_TOOLS_VERSION = 0.10.0
 CST_VERSION = 1.10.0
 ENVTEST_K8S_VERSION = 1.23
 EXTERNAL_DNS_VERSION = 0.10.2
-HELM_VERSION = 3.7.1
+HELM_VERSION = 3.10.0
 KUSTOMIZE_VERSION = 4.4.1
 
 BINDIR = $(shell pwd)/bin
@@ -121,15 +122,14 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 CONTROLLER_GEN = $(BINDIR)/controller-gen
 .PHONY: controller-gen
-controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
+controller-gen: $(BINDIR) ## Download controller-gen locally if necessary.
+	test -s $(BINDIR)/controller-gen || GOBIN=$(BINDIR) go install sigs.k8s.io/controller-tools/cmd/controller-gen@v$(CONTROLLER_TOOLS_VERSION)
 
 HELM :=  $(BINDIR)/helm
 .PHONY: helm
 helm: $(HELM) ## Download helm locally if necessary.
 
-$(HELM):
-	mkdir -p $(BINDIR)
+$(HELM): $(BINDIR)
 	curl -L -sS https://get.helm.sh/helm-v$(HELM_VERSION)-linux-amd64.tar.gz \
 	  | tar xz -C $(BINDIR) --strip-components 1 linux-amd64/helm
 
@@ -138,16 +138,15 @@ KUSTOMIZE = $(BINDIR)/kustomize
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 
-$(KUSTOMIZE):
-	mkdir -p $(BINDIR)
+$(KUSTOMIZE): $(BINDIR)
 	curl -fsL https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv$(KUSTOMIZE_VERSION)/kustomize_v$(KUSTOMIZE_VERSION)_linux_amd64.tar.gz | \
 	tar -C $(BINDIR) -xzf -
 
 SETUP_ENVTEST = $(BINDIR)/setup-envtest
 .PHONY: setup-envtest
-setup-envtest: $(SETUP_ENVTEST)
+setup-envtest: $(BINDIR) $(SETUP_ENVTEST)
 $(SETUP_ENVTEST): ## Download envtest-setup locally if necessary.
-	GOBIN=$(BINDIR) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	test -s $(BINDIR)/setup-envtest || GOBIN=$(BINDIR) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
 # go-get-tool will 'go get' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -162,6 +161,9 @@ GOBIN=$(PROJECT_DIR)/bin go get $(2) ;\
 rm -rf $$TMP_DIR ;\
 }
 endef
+
+$(BINDIR):
+	mkdir -p $(BINDIR)
 
 CONTAINER_STRUCTURE_TEST = $(BINDIR)/container-structure-test
 $(CONTAINER_STRUCTURE_TEST):

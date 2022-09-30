@@ -19,7 +19,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -59,7 +58,7 @@ func init() {
 }
 
 func getServiceAccount() string {
-	data, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
+	data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/token")
 	if err != nil {
 		setupLog.Error(err, "could not read token")
 		return fallbackServiceAccount
@@ -78,7 +77,7 @@ func getServiceAccount() string {
 }
 
 func getNamespace() string {
-	data, err := ioutil.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+	data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
 	if err != nil {
 		setupLog.Error(err, "could not get namespace")
 		return ""
