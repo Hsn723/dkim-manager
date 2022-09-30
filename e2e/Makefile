@@ -1,6 +1,6 @@
 PROJECT_NAME = dkim-manager
 CERT_MANAGER_VERSION = 1.6.1
-KIND_VERSION = 0.11.1
+KIND_VERSION = 0.16.0
 KUBERNETES_VERSION = 1.23.1
 
 BINDIR = $(dir $(shell pwd))/bin/

@@ -2,10 +2,11 @@
 # Image URL to use all building/pushing image targets
 IMG ?= ghcr.io/hsn723/dkim-manager:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
+CONTROLLER_GEN_VERSION = 0.10.0
 CST_VERSION = 1.10.0
 ENVTEST_K8S_VERSION = 1.23
 EXTERNAL_DNS_VERSION = 0.10.2
-HELM_VERSION = 3.7.1
+HELM_VERSION = 3.10.0
 KUSTOMIZE_VERSION = 4.4.1
 
 BINDIR = $(shell pwd)/bin
@@ -122,7 +123,7 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 CONTROLLER_GEN = $(BINDIR)/controller-gen
 .PHONY: controller-gen
 controller-gen: ## Download controller-gen locally if necessary.
-	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v0.8.0)
+	$(call go-get-tool,$(CONTROLLER_GEN),sigs.k8s.io/controller-tools/cmd/controller-gen@v$(CONTROLLER_GEN_VERSION))
 
 HELM :=  $(BINDIR)/helm
 .PHONY: helm

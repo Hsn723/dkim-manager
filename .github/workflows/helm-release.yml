@@ -20,7 +20,7 @@ jobs:
       - name: Install Helm
         uses: azure/setup-helm@v3.3
         with:
-          version: v3.7.1
+          version: v3.10.0
       - name: Manually add dependencies
         run: |
           helm repo add external-dns https://kubernetes-sigs.github.io/external-dns
