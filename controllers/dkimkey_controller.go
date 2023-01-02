@@ -213,7 +213,7 @@ func (r *DKIMKeyReconciler) reconcileDKIMRecord(ctx context.Context, dk *dkimman
 		return err
 	}
 	if err := r.Patch(ctx, de, client.Apply, &client.PatchOptions{
-		Force:        pointer.BoolPtr(true),
+		Force:        pointer.Bool(true),
 		FieldManager: "dkim-manager",
 	}); err != nil {
 		return err
@@ -228,7 +228,7 @@ func (r *DKIMKeyReconciler) reconcileDKIMPrivateKey(ctx context.Context, dk *dki
 	s := &corev1.Secret{}
 	s.SetName(dk.Spec.SecretName)
 	s.SetNamespace(dk.Namespace)
-	s.Immutable = pointer.BoolPtr(true)
+	s.Immutable = pointer.Bool(true)
 	s.Data = map[string][]byte{
 		filename: key,
 	}
