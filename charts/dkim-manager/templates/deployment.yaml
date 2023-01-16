@@ -79,3 +79,9 @@ spec:
           secret:
             defaultMode: 420
             secretName: webhook-server-cert
+      {{- if .Values.controller.imagePullSecrets }}
+      imagePullSecrets:
+      {{- range .Values.controller.imagePullSecrets }}
+      - name: {{ . }}
+      {{- end }}
+      {{- end }}
