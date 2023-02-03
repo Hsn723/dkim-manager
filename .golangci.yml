@@ -4,6 +4,8 @@ linters:
     - dupl
     - errcheck
     - forbidigo
+    - ginkgolinter
+    - gocheckcompilerdirectives
     - gocognit
     - goconst
     - gocyclo
