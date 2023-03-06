@@ -66,8 +66,6 @@ sboms:
     artifacts: source
 signs:
   - cmd: cosign
-    env:
-      - COSIGN_EXPERIMENTAL=1
     certificate: '${artifact}.pem'
     args:
       - sign-blob
@@ -78,8 +76,6 @@ signs:
     output: true
 docker_signs:
   - cmd: cosign
-    env:
-      - COSIGN_EXPERIMENTAL=1
     artifacts: all
     output: true
     args:
