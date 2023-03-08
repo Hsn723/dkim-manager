@@ -69,6 +69,7 @@ signs:
     certificate: '${artifact}.pem'
     args:
       - sign-blob
+      - '--yes'
       - '--output-certificate=${certificate}'
       - '--output-signature=${signature}'
       - '${artifact}'
@@ -80,4 +81,5 @@ docker_signs:
     output: true
     args:
       - 'sign'
+      - '--yes'
       - '${artifact}'
