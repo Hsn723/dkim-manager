@@ -2,12 +2,12 @@
 # Image URL to use all building/pushing image targets
 IMG ?= ghcr.io/hsn723/dkim-manager:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
-CONTROLLER_TOOLS_VERSION = 0.10.0
+CONTROLLER_TOOLS_VERSION = 0.12.0
 CST_VERSION = 1.10.0
 ENVTEST_K8S_VERSION = 1.23
-EXTERNAL_DNS_VERSION = 0.10.2
-HELM_VERSION = 3.10.0
-KUSTOMIZE_VERSION = 4.4.1
+EXTERNAL_DNS_VERSION = 0.13.4
+HELM_VERSION = 3.12.0
+KUSTOMIZE_VERSION = 5.0.3
 
 BINDIR = $(shell pwd)/bin
 
@@ -83,9 +83,9 @@ crds:
 test: manifests generate fmt vet crds setup-envtest ## Run tests.
 	go test -v -count 1 -race ./pkg/... -coverprofile pkg-cover.out
 	source <($(SETUP_ENVTEST) use -p env); \
-		go test -v -count 1 -race ./controllers -ginkgo.progress -ginkgo.v -ginkgo.fail-fast -coverprofile controllers-cover.out
+		go test -v -count 1 -race ./controllers -ginkgo.v -ginkgo.fail-fast -coverprofile controllers-cover.out
 	source <($(SETUP_ENVTEST) use -p env); \
-		go test -v -count 1 -race ./hooks -ginkgo.progress -ginkgo.v -ginkgo.fail-fast -coverprofile hooks-cover.out
+		go test -v -count 1 -race ./hooks -ginkgo.v -ginkgo.fail-fast -coverprofile hooks-cover.out
 
 ##@ Build
 

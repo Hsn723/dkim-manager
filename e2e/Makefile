@@ -35,7 +35,7 @@ start: $(HELM) $(KIND) $(KUBECTL) crds start-kind deploy bootstrap
 .PHONY: test
 test:
 	env PATH="$$(pwd)/../bin:$$PATH" RUN_E2E=1 \
-		go test -v -race . -ginkgo.progress -ginkgo.v -ginkgo.fail-fast
+		go test -v -race . -ginkgo.v -ginkgo.fail-fast
 
 .PHONY: stop
 stop: $(KIND) 

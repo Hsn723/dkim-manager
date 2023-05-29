@@ -88,8 +88,7 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	dec, err := admission.NewDecoder(scheme)
-	Expect(err).NotTo(HaveOccurred())
+	dec := admission.NewDecoder(scheme)
 	SetupDKIMKeyWebhook(mgr, dec)
 	SetupDNSEndpointWebhook(mgr, dec, "dummy")
 	SetupSecretWebhook(mgr, dec, "dummy")
