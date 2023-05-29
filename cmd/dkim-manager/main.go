@@ -29,6 +29,7 @@ import (
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -37,7 +38,6 @@ import (
 	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
 	"github.com/hsn723/dkim-manager/controllers"
 	"github.com/hsn723/dkim-manager/hooks"
-	cacheclient "github.com/hsn723/dkim-manager/pkg/client"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -111,8 +111,12 @@ func main() {
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                 scheme,
-		NewClient:              cacheclient.NewCachingClient,
+		Scheme: scheme,
+		Client: client.Options{
+			Cache: &client.CacheOptions{
+				Unstructured: true,
+			},
+		},
 		MetricsBindAddress:     metricsAddr,
 		Port:                   9443,
 		HealthProbeBindAddress: probeAddr,
@@ -124,10 +128,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	dec, err := admission.NewDecoder(scheme)
-	if err != nil {
-		setupLog.Error(err, "unable to create admission decoder")
-	}
+	dec := admission.NewDecoder(scheme)
 
 	if namespace == "" && namespaced {
 		namespace = getNamespace()
