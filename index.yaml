@@ -3,6 +3,21 @@ entries:
   dkim-manager:
   - apiVersion: v2
     appVersion: 1.2.6
+    created: "2023-07-27T14:36:21.945371945Z"
+    dependencies:
+    - condition: external-dns.enabled
+      name: external-dns
+      repository: https://kubernetes-sigs.github.io/external-dns
+      version: 1.12.0
+    description: dkim-manager is a Kubernetes controller for creating DKIM keys.
+    digest: 671e99f5d1aa3b15d95b056060920f671e0a930d6fedecad5f8efc59862bcb3b
+    name: dkim-manager
+    type: application
+    urls:
+    - https://github.com/Hsn723/dkim-manager/releases/download/helm-v0.1.7/dkim-manager-0.1.7.tgz
+    version: 0.1.7
+  - apiVersion: v2
+    appVersion: 1.2.6
     created: "2023-05-29T13:23:20.68101699Z"
     dependencies:
     - condition: external-dns.enabled
@@ -76,4 +91,4 @@ entries:
     urls:
     - https://github.com/Hsn723/dkim-manager/releases/download/helm-v0.1.2/dkim-manager-0.1.2.tgz
     version: 0.1.2
-generated: "2023-05-29T13:23:20.68104469Z"
+generated: "2023-07-27T14:36:21.945388845Z"
