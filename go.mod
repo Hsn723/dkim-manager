@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/go-logr/logr v1.2.4
 	github.com/golang-jwt/jwt/v4 v4.5.0
-	github.com/google/uuid v1.3.0
+	github.com/google/uuid v1.3.1
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.10
 	github.com/stretchr/testify v1.8.4
