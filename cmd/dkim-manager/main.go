@@ -32,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/golang-jwt/jwt/v4"
@@ -117,8 +119,10 @@ func main() {
 				Unstructured: true,
 			},
 		},
-		MetricsBindAddress:     metricsAddr,
-		Port:                   9443,
+		Metrics: metricsserver.Options{BindAddress: metricsAddr},
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: webhook.DefaultPort,
+		}),
 		HealthProbeBindAddress: probeAddr,
 		LeaderElection:         enableLeaderElection,
 		LeaderElectionID:       "efef7e15.atelierhsn.com",

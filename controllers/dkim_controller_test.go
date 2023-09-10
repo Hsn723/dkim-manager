@@ -13,6 +13,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
 	"github.com/hsn723/dkim-manager/pkg/dkim"
@@ -51,9 +52,9 @@ var _ = Describe("DKIMKey controller", func() {
 
 	BeforeEach(func() {
 		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme:             scheme,
-			LeaderElection:     false,
-			MetricsBindAddress: "0",
+			Scheme:         scheme,
+			LeaderElection: false,
+			Metrics:        metricsserver.Options{BindAddress: "0"},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		reconciler := &DKIMKeyReconciler{
@@ -376,9 +377,9 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 
 	BeforeEach(func() {
 		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
-			Scheme:             scheme,
-			LeaderElection:     false,
-			MetricsBindAddress: "0",
+			Scheme:         scheme,
+			LeaderElection: false,
+			Metrics:        metricsserver.Options{BindAddress: "0"},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		reconciler := &DKIMKeyReconciler{
