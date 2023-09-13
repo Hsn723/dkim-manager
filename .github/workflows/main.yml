@@ -40,7 +40,7 @@ jobs:
         uses: actions/setup-go@v4
         with:
           go-version: ${{ env.go-version }}
-      - uses: goreleaser/goreleaser-action@v4
+      - uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
           args: check -f .goreleaser.yml
@@ -89,7 +89,7 @@ jobs:
         run: |
           echo "GORELEASER_CURRENT_TAG=$(git describe --tags --abbrev=0 --match "v*" || echo v0.0.0)" >> $GITHUB_ENV
       - name: GoReleaser
-        uses: goreleaser/goreleaser-action@v4
+        uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
           args: --snapshot --skip-sign --skip-publish --clean
