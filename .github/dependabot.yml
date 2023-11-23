@@ -6,6 +6,13 @@ updates:
       interval: "weekly"
     reviewers:
       - "Hsn723"
+    groups:
+      k8s:
+        patterns:
+          - "k8s.io/*"
+      ginkgo:
+        patterns:
+          - "github.com/onsi/*"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
