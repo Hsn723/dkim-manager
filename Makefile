@@ -3,7 +3,6 @@
 IMG ?= ghcr.io/hsn723/dkim-manager:latest
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 CONTROLLER_TOOLS_VERSION = 0.12.0
-CST_VERSION = 1.10.0
 ENVTEST_K8S_VERSION = 1.23
 EXTERNAL_DNS_VERSION = 0.13.4
 HELM_VERSION = 3.12.0
@@ -168,7 +167,7 @@ $(BINDIR):
 CONTAINER_STRUCTURE_TEST = $(BINDIR)/container-structure-test
 $(CONTAINER_STRUCTURE_TEST):
 	if [ -z "$(shell which container-structure-test)" ]; then \
-		curl -LO https://storage.googleapis.com/container-structure-test/v$(CST_VERSION)/container-structure-test-linux-amd64 && mv container-structure-test-linux-amd64 container-structure-test && chmod +x container-structure-test && sudo mv container-structure-test /usr/local/bin/; \
+		curl -LO https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64 && mv container-structure-test-linux-amd64 container-structure-test && chmod +x container-structure-test && sudo mv container-structure-test /usr/local/bin/; \
 	fi
 
 .PHONY: container-structure-test
