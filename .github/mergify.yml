@@ -10,8 +10,7 @@ pull_request_rules:
   - name: Automatic merge for dependabot
     conditions:
       - author~=^dependabot\[bot\]$
-      - title~=^Bump [^\s]+ from ([\d]+)\.([\d]+)\..+ to \1\.\2\.
-      - label!=github_actions
+      - title~=^Bump [^\s]+ from ([\d]+)\.([\d]+)\..+ to \1\.
     actions:
       review:
         type: APPROVE
