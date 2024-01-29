@@ -92,7 +92,7 @@ jobs:
         uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
-          args: --snapshot --skip-sign --skip-publish --clean
+          args: --snapshot --skip=sign,publish --clean
       - name: Test built containers
         run: make container-structure-test
   tag:
