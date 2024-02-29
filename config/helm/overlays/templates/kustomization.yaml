@@ -8,8 +8,8 @@ namePrefix: '{{ template "project.fullname" . }}-'
 commonLabels:
   app.kubernetes.io/name: '{{ include "project.name" . }}'
 
-patchesStrategicMerge:
-  - webhookcainjection_patch.yaml
+patches:
+  - path: webhookcainjection_patch.yaml
 
 transformers:
   - label-transformer.yaml
