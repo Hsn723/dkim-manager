@@ -6,13 +6,21 @@ updates:
       interval: "daily"
     reviewers:
       - "Hsn723"
+    allow:
+      - dependency-type: "all"
     groups:
       k8s:
         patterns:
           - "k8s.io/*"
       ginkgo:
         patterns:
-          - "github.com/onsi/*"
+          - "^github.com/onsi/*"
+      other:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "k8s.io/*"
+          - "^github.com/onsi/*"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
