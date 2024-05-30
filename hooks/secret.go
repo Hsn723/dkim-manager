@@ -36,7 +36,7 @@ func (v *secretValidator) Handle(ctx context.Context, req admission.Request) adm
 
 func (v *secretValidator) handleDelete(req admission.Request) admission.Response {
 	s := &corev1.Secret{}
-	if err := v.dec.DecodeRaw(req.OldObject, s); err != nil {
+	if err := (*v.dec).DecodeRaw(req.OldObject, s); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 	owners := s.GetOwnerReferences()

@@ -151,9 +151,9 @@ func main() {
 	//+kubebuilder:scaffold:builder
 
 	if webhooksEnabled {
-		hooks.SetupDKIMKeyWebhook(mgr, dec)
-		hooks.SetupDNSEndpointWebhook(mgr, dec, serviceAccount)
-		hooks.SetupSecretWebhook(mgr, dec, serviceAccount)
+		hooks.SetupDKIMKeyWebhook(mgr, &dec)
+		hooks.SetupDNSEndpointWebhook(mgr, &dec, serviceAccount)
+		hooks.SetupSecretWebhook(mgr, &dec, serviceAccount)
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

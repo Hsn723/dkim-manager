@@ -35,11 +35,12 @@ func (v *dkimKeyValidator) Handle(ctx context.Context, req admission.Request) ad
 
 func (v *dkimKeyValidator) handleUpdate(req admission.Request) admission.Response {
 	dkNew := &dkimmanagerv1.DKIMKey{}
-	if err := v.dec.Decode(req, dkNew); err != nil {
+	decoder := *v.dec
+	if err := decoder.Decode(req, dkNew); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 	dkOld := &dkimmanagerv1.DKIMKey{}
-	if err := v.dec.DecodeRaw(req.OldObject, dkOld); err != nil {
+	if err := decoder.DecodeRaw(req.OldObject, dkOld); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 	if dkNew.Name != dkOld.Name {
