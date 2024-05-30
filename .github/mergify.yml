@@ -10,7 +10,7 @@ pull_request_rules:
   - name: Automatic merge for dependabot
     conditions:
       - author~=^dependabot\[bot\]$
-      - title~=^Bump (([^\s]+ from ([\d]+)\.([\d]+)\..+ to \3\.)|the [^\s]+ group with \d+ update)
+      - title~=^Bump (([^\s]+ from ([\d]+)\.([\d]+)\..+ to \3\.)|the [^\s]+ group (across \d+ directory )?with \d+ update)
     actions:
       review:
         type: APPROVE

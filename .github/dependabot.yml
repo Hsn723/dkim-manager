@@ -12,6 +12,7 @@ updates:
       k8s:
         patterns:
           - "k8s.io/*"
+          - "^sigs.k8s.io/*"
       ginkgo:
         patterns:
           - "^github.com/onsi/*"
@@ -19,7 +20,8 @@ updates:
         patterns:
           - "*"
         exclude-patterns:
-          - "k8s.io/*"
+          - "^k8s.io/*"
+          - "^sigs.k8s.io/*"
           - "^github.com/onsi/*"
   - package-ecosystem: "docker"
     directory: "/"

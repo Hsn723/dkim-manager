@@ -36,7 +36,7 @@ func (v *dnsEndpointValidator) Handle(ctx context.Context, req admission.Request
 
 func (v *dnsEndpointValidator) handleDelete(req admission.Request) admission.Response {
 	de := externaldns.DNSEndpoint()
-	if err := v.dec.DecodeRaw(req.OldObject, de); err != nil {
+	if err := (*v.dec).DecodeRaw(req.OldObject, de); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
 	owners := de.GetOwnerReferences()
