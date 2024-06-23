@@ -1,7 +1,7 @@
 PROJECT_NAME = dkim-manager
 CERT_MANAGER_VERSION = 1.6.1
-KIND_VERSION = 0.16.0
-KUBERNETES_VERSION = 1.23.1
+KIND_VERSION = 0.23.0
+KUBERNETES_VERSION = $(shell curl -L -s https://dl.k8s.io/release/stable.txt)
 
 BINDIR = $(dir $(shell pwd))/bin/
 HELM = $(BINDIR)/helm
@@ -59,3 +59,15 @@ $(KUBECTL):
 	mkdir -p ../bin
 	curl -sfL -o $@ https://dl.k8s.io/release/v$(KUBERNETES_VERSION)/bin/linux/amd64/kubectl
 	chmod a+x $@
+
+.PHONY: get-k8s-versions
+get-k8s-versions:
+	@LATEST_VERSION=$$(curl -L -s https://dl.k8s.io/release/stable.txt) && \
+	KIND_TAGS=$$(curl -L -s 'https://registry.hub.docker.com/v2/repositories/kindest/node/tags?page_size=1024' | jq -r '.results[] | .name' | grep -Po '\d+\.\d+\.\d+$$' | sort -u) && \
+	LATEST_VERSION_MAJOR=$$(echo $${LATEST_VERSION} | grep -Po '(?<=v)\d+\.\d+') && \
+	LATEST_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${LATEST_VERSION_MAJOR}" | sort -u | tail -n 1) && \
+	PREVIOUS_VERSION_MAJOR=$$(echo $${LATEST_VERSION_MAJOR} | awk -F. -v OFS=. '{$$NF -= 1; print}') && \
+	PREVIOUS_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${PREVIOUS_VERSION_MAJOR}" | sort -u | tail -n 1) && \
+	PREVIOUS2_VERSION_MAJOR=$$(echo $${PREVIOUS_VERSION_MAJOR} | awk -F. -v OFS=. '{$$NF -= 1; print}') && \
+	PREVIOUS2_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${PREVIOUS2_VERSION_MAJOR}" | sort -u | tail -n 1) && \
+	echo "['$${PREVIOUS2_KIND_TAG}', '$${PREVIOUS_KIND_TAG}', '$${LATEST_KIND_TAG}']"
