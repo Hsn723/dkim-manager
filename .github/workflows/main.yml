@@ -55,11 +55,22 @@ jobs:
           go-version: ${{ env.go-version }}
       - name: Test
         run: make test
+  get-k8s-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      k8s-versions: ${{ steps.get-k8s-version.outputs.versions }}
+    steps:
+    - uses: actions/checkout@v4
+    - id: get-k8s-version
+      working-directory: e2e
+      run: |
+        echo "versions=$(make get-k8s-versions)" >> $GITHUB_OUTPUT
   e2e:
     name: End-to-End Tests
+    needs: get-k8s-versions
     strategy:
       matrix:
-        k8s-version: ['1.27.2', '1.28.0', '1.29.0']
+        k8s-version: ${{ fromJson(needs.get-k8s-versions.outputs.k8s-versions) }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
