@@ -81,6 +81,12 @@ jobs:
       working-directory: e2e
     - run: make test
       working-directory: e2e
+  all-e2e-pass:
+    name: All e2e test pass
+    needs: e2e
+    runs-on: ubuntu-latest
+    steps:
+    - run: exit 0
   dry-run:
     name: Dry-run release
     runs-on: ubuntu-latest
