@@ -1,6 +1,6 @@
 PROJECT_NAME = dkim-manager
 CERT_MANAGER_VERSION = 1.6.1
-KIND_VERSION = 0.23.0
+KIND_VERSION = 0.26.0
 KUBERNETES_VERSION = $(shell curl -L -s https://dl.k8s.io/release/stable.txt)
 
 BINDIR = $(dir $(shell pwd))/bin/
