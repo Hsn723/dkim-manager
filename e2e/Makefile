@@ -63,7 +63,7 @@ $(KUBECTL):
 .PHONY: get-k8s-versions
 get-k8s-versions:
 	@LATEST_VERSION=$$(curl -L -s https://dl.k8s.io/release/stable.txt) && \
-	KIND_TAGS=$$(curl -L -s 'https://registry.hub.docker.com/v2/repositories/kindest/node/tags?page_size=1024' | jq -r '.results[] | .name' | grep -Po '\d+\.\d+\.\d+$$' | sort -u) && \
+	KIND_TAGS=$$(curl -L -s 'https://registry.hub.docker.com/v2/repositories/kindest/node/tags?page_size=1024' | jq -r '.results[] | .name' | grep -Po '\d+\.\d+\.\d+$$' | grep -v '1.32.1' | sort -u) && \
 	LATEST_VERSION_MAJOR=$$(echo $${LATEST_VERSION} | grep -Po '(?<=v)\d+\.\d+') && \
 	LATEST_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${LATEST_VERSION_MAJOR}" | sort -u | tail -n 1) && \
 	PREVIOUS_VERSION_MAJOR=$$(echo $${LATEST_VERSION_MAJOR} | awk -F. -v OFS=. '{$$NF -= 1; print}') && \
