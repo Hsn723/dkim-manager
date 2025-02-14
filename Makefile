@@ -9,6 +9,7 @@ HELM_VERSION = 3.12.0
 KUSTOMIZE_VERSION = 5.0.3
 
 BINDIR = $(shell pwd)/bin
+YQ = $(BINDIR)/yq
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -165,11 +166,13 @@ $(BINDIR):
 	mkdir -p $(BINDIR)
 
 CONTAINER_STRUCTURE_TEST = $(BINDIR)/container-structure-test
-$(CONTAINER_STRUCTURE_TEST):
-	if [ -z "$(shell which container-structure-test)" ]; then \
-		curl -LO https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64 && mv container-structure-test-linux-amd64 container-structure-test && chmod +x container-structure-test && sudo mv container-structure-test /usr/local/bin/; \
-	fi
+$(CONTAINER_STRUCTURE_TEST): $(BINDIR)
+	curl -sSLf -o $(CONTAINER_STRUCTURE_TEST) https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64 && chmod +x $(CONTAINER_STRUCTURE_TEST)
 
 .PHONY: container-structure-test
-container-structure-test: $(CONTAINER_STRUCTURE_TEST)
-	printf "amd64\narm64" | xargs -n1 -I {} container-structure-test test --image ghcr.io/hsn723/dkim-manager:$(shell git describe --tags --abbrev=0 --match "v*" || echo v0.0.0)-next-{} --config cst.yaml
+container-structure-test: $(CONTAINER_STRUCTURE_TEST) $(YQ)
+	$(YQ) '.builds[0] | .goarch[]' .goreleaser.yml | xargs -I {} $(CONTAINER_STRUCTURE_TEST) test --image ghcr.io/hsn723/dkim-manager:$(shell git describe --tags --abbrev=0 --match "v*" || echo v0.0.0)-next-{} --config cst.yaml
+
+.PHONY: $(YQ)
+$(YQ): $(BINDIR)
+	GOBIN=$(BINDIR) go install github.com/mikefarah/yq/v4@latest
