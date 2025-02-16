@@ -2,6 +2,7 @@ PROJECT_NAME = dkim-manager
 CERT_MANAGER_VERSION = 1.6.1
 KIND_VERSION = 0.26.0
 KUBERNETES_VERSION = $(shell curl -L -s https://dl.k8s.io/release/stable.txt)
+KIND_NODE_TAG = ""
 
 BINDIR = $(dir $(shell pwd))/bin/
 HELM = $(BINDIR)/helm
@@ -13,7 +14,7 @@ export KUBECTL KUBECONFIG
 
 .PHONY: start-kind
 start-kind:
-	$(KIND) create cluster --name=$(PROJECT_NAME) --config=$(KIND_CONFIG) --image=kindest/node:v$(KUBERNETES_VERSION) --wait 1m
+	$(KIND) create cluster --name=$(PROJECT_NAME) --config=$(KIND_CONFIG) --image=kindest/node:v$(KIND_NODE_TAG) --wait 1m
 
 .PHONY: deploy
 deploy:
@@ -57,13 +58,13 @@ $(KIND):
 
 $(KUBECTL):
 	mkdir -p ../bin
-	curl -sfL -o $@ https://dl.k8s.io/release/v$(KUBERNETES_VERSION)/bin/linux/amd64/kubectl
+	curl -sfL -o $@ https://dl.k8s.io/release/$(KUBERNETES_VERSION)/bin/linux/amd64/kubectl
 	chmod a+x $@
 
 .PHONY: get-k8s-versions
 get-k8s-versions:
 	@LATEST_VERSION=$$(curl -L -s https://dl.k8s.io/release/stable.txt) && \
-	KIND_TAGS=$$(curl -L -s 'https://registry.hub.docker.com/v2/repositories/kindest/node/tags?page_size=1024' | jq -r '.results[] | .name' | grep -Po '\d+\.\d+\.\d+$$' | grep -vP '1.32.[1-9]' | sort -u) && \
+	KIND_TAGS=$$(gh api /repos/kubernetes-sigs/kind/releases/tags/v$(KIND_VERSION) | jq -r '.body' | grep -Po '(?<=- v)(?:\d+\.\d+\.\d+: `kindest\/node:v)\K(\d+\.\d+\.\d+@sha256:[a-f0-9]+)') && \
 	LATEST_VERSION_MAJOR=$$(echo $${LATEST_VERSION} | grep -Po '(?<=v)\d+\.\d+') && \
 	LATEST_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${LATEST_VERSION_MAJOR}" | sort -u | tail -n 1) && \
 	PREVIOUS_VERSION_MAJOR=$$(echo $${LATEST_VERSION_MAJOR} | awk -F. -v OFS=. '{$$NF -= 1; print}') && \
