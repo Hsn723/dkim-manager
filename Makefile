@@ -167,11 +167,11 @@ $(BINDIR):
 
 CONTAINER_STRUCTURE_TEST = $(BINDIR)/container-structure-test
 $(CONTAINER_STRUCTURE_TEST): $(BINDIR)
-	curl -sSLf -o $(CONTAINER_STRUCTURE_TEST) https://storage.googleapis.com/container-structure-test/latest/container-structure-test-linux-amd64 && chmod +x $(CONTAINER_STRUCTURE_TEST)
+	curl -sSLf -o $(CONTAINER_STRUCTURE_TEST) https://github.com/GoogleContainerTools/container-structure-test/releases/latest/download/container-structure-test-linux-amd64 && chmod +x $(CONTAINER_STRUCTURE_TEST)
 
 .PHONY: container-structure-test
 container-structure-test: $(CONTAINER_STRUCTURE_TEST) $(YQ)
-	$(YQ) '.builds[0] | .goarch[]' .goreleaser.yml | xargs -I {} $(CONTAINER_STRUCTURE_TEST) test --image ghcr.io/hsn723/dkim-manager:$(shell git describe --tags --abbrev=0 --match "v*" || echo v0.0.0)-next-{} --config cst.yaml
+	$(YQ) '.builds[0] | .goarch[]' .goreleaser.yml | xargs -I {} $(CONTAINER_STRUCTURE_TEST) test --image ghcr.io/hsn723/dkim-manager:$(shell git describe --tags --abbrev=0 --match "v*" || echo v0.0.0)-next-{} --platform linux/{} --config cst.yaml
 
 .PHONY: $(YQ)
 $(YQ): $(BINDIR)
