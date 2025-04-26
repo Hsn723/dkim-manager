@@ -1,6 +1,5 @@
 PROJECT_NAME = dkim-manager
 CERT_MANAGER_VERSION = 1.6.1
-KIND_VERSION = 0.26.0
 KUBERNETES_VERSION = $(shell curl -L -s https://dl.k8s.io/release/stable.txt)
 KIND_NODE_TAG = ""
 
@@ -39,7 +38,7 @@ test:
 		go test -v -race . -ginkgo.v -ginkgo.fail-fast
 
 .PHONY: stop
-stop: $(KIND) 
+stop: $(KIND)
 	$(KIND) delete cluster --name=$(PROJECT_NAME)
 	-docker image rm $(PROJECT_NAME):dev
 	-docker image prune -f
@@ -53,7 +52,7 @@ $(HELM):
 
 $(KIND):
 	mkdir -p ../bin
-	curl -sfL -o $@ https://github.com/kubernetes-sigs/kind/releases/download/v$(KIND_VERSION)/kind-linux-amd64
+	curl -sfL -o $@ https://github.com/kubernetes-sigs/kind/releases/latest/download/kind-linux-amd64
 	chmod a+x $@
 
 $(KUBECTL):
@@ -64,7 +63,7 @@ $(KUBECTL):
 .PHONY: get-k8s-versions
 get-k8s-versions:
 	@LATEST_VERSION=$$(curl -L -s https://dl.k8s.io/release/stable.txt) && \
-	KIND_TAGS=$$(gh api /repos/kubernetes-sigs/kind/releases/tags/v$(KIND_VERSION) | jq -r '.body' | grep -Po '(?<=- v)(?:\d+\.\d+\.\d+: `kindest\/node:v)\K(\d+\.\d+\.\d+@sha256:[a-f0-9]+)') && \
+	KIND_TAGS=$$(gh api /repos/kubernetes-sigs/kind/releases/latest | jq -r '.body' | grep -Po '(?<=- v)(?:\d+\.\d+\.\d+: `kindest\/node:v)\K(\d+\.\d+\.\d+@sha256:[a-f0-9]+)') && \
 	LATEST_VERSION_MAJOR=$$(echo $${LATEST_VERSION} | grep -Po '(?<=v)\d+\.\d+') && \
 	LATEST_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${LATEST_VERSION_MAJOR}" | sort -u | tail -n 1) && \
 	PREVIOUS_VERSION_MAJOR=$$(echo $${LATEST_VERSION_MAJOR} | awk -F. -v OFS=. '{$$NF -= 1; print}') && \
