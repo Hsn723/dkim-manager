@@ -5,6 +5,8 @@ on:
       - master
     paths:
       - 'charts/dkim-manager/Chart.yaml'
+permissions:
+  contents: write
 jobs:
   release:
     runs-on: ubuntu-latest

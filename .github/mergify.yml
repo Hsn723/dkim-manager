@@ -16,3 +16,12 @@ pull_request_rules:
         type: APPROVE
       merge:
         method: squash
+  - name: Automatic merge for pre-commit
+    conditions:
+      - author~=^pre-commit-ci\[bot\]$
+      - title~=^\[pre-commit\.ci\] pre-commit autoupdate$
+    actions:
+      review:
+        type: APPROVE
+      merge:
+        method: squash
