@@ -1,5 +1,4 @@
 project_name: dkim-manager
-dist: bin/
 before:
   hooks:
     - go mod download

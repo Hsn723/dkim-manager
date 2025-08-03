@@ -7,6 +7,8 @@ on:
       - '*'
 env:
   go-version: stable
+permissions:
+  contents: read
 jobs:
   build:
     name: Build
@@ -116,17 +118,3 @@ jobs:
           args: --snapshot --skip=sign,publish --clean
       - name: Test built containers
         run: make container-structure-test
-  tag:
-    name: Tag release
-    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-    needs: [build, lint, check-goreleaser-config, test, dry-run, e2e]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.PAT }}
-      - name: Tag release
-        run: |
-          TAG="v$(cat VERSION)"
-          git tag ${TAG}
-          git push origin ${TAG} || true
