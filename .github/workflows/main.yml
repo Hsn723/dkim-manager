@@ -14,7 +14,7 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup go
         uses: actions/setup-go@v5
         with:
@@ -25,7 +25,7 @@ jobs:
     name: Lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
       - name: Setup go
         uses: actions/setup-go@v5
@@ -37,7 +37,7 @@ jobs:
     name: Check goreleaser.yml
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup go
         uses: actions/setup-go@v5
         with:
@@ -50,7 +50,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Setup go
         uses: actions/setup-go@v5
         with:
@@ -64,7 +64,7 @@ jobs:
     permissions:
       contents: read
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - id: get-k8s-version
       working-directory: e2e
       env:
@@ -79,7 +79,7 @@ jobs:
         k8s-version: ${{ fromJson(needs.get-k8s-versions.outputs.k8s-versions) }}
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: actions/setup-go@v5
       with:
         go-version: ${{ env.go-version }}
@@ -98,7 +98,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: docker/setup-qemu-action@v3
