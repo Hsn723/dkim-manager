@@ -22,6 +22,10 @@ When sending mail from inside a Kubernetes cluster, you might want to sign outgo
 
 It is recommended to create a delegated subdomain for the sole purpose of storing DKIM records (eg: `dkim.example.com`) and grant `external-dns` only permission on that subdomain. See [this blog](https://atelierhsn.com/2022/01/cert-manager-done-right/) for more details why.
 
+## Upgrading
+
+See [UPGRADING.md](UPGRADING.md) for upgrade instructions, especially when upgrading to v1.3.0+ which includes a breaking change to the status format.
+
 ## Installation
 `dkim-manager` requires `cert-manager` and `external-dns` to be installed first. The [helm installation instructions](charts/dkim-manager/README.md) are a good place to get started. If installing `external-dns` separately, not that the following arguments should be set for `dkim-manager` to be able to register TXT records:
 

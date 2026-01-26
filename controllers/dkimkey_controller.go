@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -70,11 +71,11 @@ func (r *DKIMKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	if r.Namespace != "" && dk.Namespace != r.Namespace {
-		if dk.Status == dkimmanagerv1.DKIMKeyStatusInvalid {
+		if r.hasCondition(dk, dkimmanagerv1.ConditionReady, v1.ConditionFalse, dkimmanagerv1.ReasonInvalid) {
 			return ctrl.Result{}, nil
 		}
 		logger.Info("dkimkey is in an invalid namespace, ignoring")
-		dk.Status = dkimmanagerv1.DKIMKeyStatusInvalid
+		r.setCondition(dk, dkimmanagerv1.ConditionReady, v1.ConditionFalse, dkimmanagerv1.ReasonInvalid, "DKIMKey is in an invalid namespace")
 		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 
@@ -88,11 +89,34 @@ func (r *DKIMKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, r.finalize(ctx, dk)
 	}
 
-	if dk.Status == dkimmanagerv1.DKIMKeyStatusOK {
+	if dk.IsReady() && dk.Status.ObservedGeneration == dk.Generation {
 		return ctrl.Result{}, nil
 	}
 
 	return r.reconcile(ctx, dk)
+}
+
+// setCondition updates the status condition on the DKIMKey.
+func (r *DKIMKeyReconciler) setCondition(dk *dkimmanagerv1.DKIMKey, condType string, status v1.ConditionStatus, reason, message string) {
+	dk.Status.ObservedGeneration = dk.Generation
+	meta.SetStatusCondition(&dk.Status.Conditions, v1.Condition{
+		Type:               condType,
+		Status:             status,
+		ObservedGeneration: dk.Generation,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: v1.Now(),
+	})
+}
+
+// hasCondition checks if the DKIMKey has a specific condition.
+func (r *DKIMKeyReconciler) hasCondition(dk *dkimmanagerv1.DKIMKey, condType string, status v1.ConditionStatus, reason string) bool {
+	for _, c := range dk.Status.Conditions {
+		if c.Type == condType && c.Status == status && c.Reason == reason {
+			return true
+		}
+	}
+	return false
 }
 
 func (r *DKIMKeyReconciler) isOwnedByDKIMKey(dk *dkimmanagerv1.DKIMKey, ownerRefs []v1.OwnerReference) bool {
@@ -150,27 +174,29 @@ func (r *DKIMKeyReconciler) reconcile(ctx context.Context, dk *dkimmanagerv1.DKI
 	case dkim.KeyTypeED25519:
 		key, pub, err = dkim.GenED25519()
 	default:
-		return ctrl.Result{}, fmt.Errorf("invalid key type specified")
+		r.setCondition(dk, dkimmanagerv1.ConditionReady, v1.ConditionFalse, dkimmanagerv1.ReasonInvalid, "Invalid key type specified")
+		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 	if err != nil {
-		return ctrl.Result{}, err
+		r.setCondition(dk, dkimmanagerv1.ConditionReady, v1.ConditionFalse, dkimmanagerv1.ReasonFailed, fmt.Sprintf("Failed to generate key: %v", err))
+		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 	if err := r.checkForExistingResources(ctx, dk); err != nil {
 		logger.Error(err, "precondition failed: resource(s) exist")
-		dk.Status = dkimmanagerv1.DKIMKeyStatusInvalid
+		r.setCondition(dk, dkimmanagerv1.ConditionReady, v1.ConditionFalse, dkimmanagerv1.ReasonInvalid, err.Error())
 		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 	if err := r.reconcileDKIMRecord(ctx, dk, pub); err != nil {
 		logger.Error(err, "failed to reconcile DNSEndpoint")
-		dk.Status = dkimmanagerv1.DKIMKeyStatusInvalid
+		r.setCondition(dk, dkimmanagerv1.ConditionReady, v1.ConditionFalse, dkimmanagerv1.ReasonFailed, fmt.Sprintf("Failed to reconcile DNSEndpoint: %v", err))
 		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 	if err := r.reconcileDKIMPrivateKey(ctx, dk, key); err != nil {
 		logger.Error(err, "failed to reconcile Secret")
-		dk.Status = dkimmanagerv1.DKIMKeyStatusInvalid
+		r.setCondition(dk, dkimmanagerv1.ConditionReady, v1.ConditionFalse, dkimmanagerv1.ReasonFailed, fmt.Sprintf("Failed to reconcile Secret: %v", err))
 		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
-	dk.Status = dkimmanagerv1.DKIMKeyStatusOK
+	r.setCondition(dk, dkimmanagerv1.ConditionReady, v1.ConditionTrue, dkimmanagerv1.ReasonSucceeded, "DKIM key created successfully")
 	return ctrl.Result{}, r.Status().Update(ctx, dk)
 }
 

@@ -126,7 +126,7 @@ var _ = Describe("DKIMKey controller", func() {
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusOK))
+		Expect(dk.IsReady()).To(BeTrue())
 	})
 
 	It("should give up early when DNSEndpoint already exists", func() {
@@ -183,7 +183,7 @@ var _ = Describe("DKIMKey controller", func() {
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusInvalid))
+		Expect(dk.IsReady()).To(BeFalse())
 	})
 
 	It("should give up early when Secret already exists", func() {
@@ -233,7 +233,7 @@ var _ = Describe("DKIMKey controller", func() {
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusInvalid))
+		Expect(dk.IsReady()).To(BeFalse())
 	})
 
 	It("should cascade delete generated resources", func() {
@@ -458,7 +458,7 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusOK))
+		Expect(dk.IsReady()).To(BeTrue())
 	})
 
 	It("should ignore resources in invalid namespaces", func() {
@@ -495,6 +495,6 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusInvalid))
+		Expect(dk.IsReady()).To(BeFalse())
 	})
 })
