@@ -51,15 +51,33 @@ type DKIMKeySpec struct {
 }
 
 // DKIMKeyStatus defines the observed state of DKIMKey.
-type DKIMKeyStatus string
+type DKIMKeyStatus struct {
+	// ObservedGeneration is the last observed generation of the DKIMKey.
+	// +optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 
+	// Conditions represent the latest available observations of the DKIMKey's state.
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
+}
+
+// Condition types for DKIMKey.
 const (
-	DKIMKeyStatusOK      = DKIMKeyStatus("ok")
-	DKIMKeyStatusInvalid = DKIMKeyStatus("invalid")
+	// ConditionReady indicates the DKIMKey has been successfully reconciled.
+	ConditionReady string = "Ready"
+)
+
+// Condition reasons for DKIMKey.
+const (
+	ReasonSucceeded string = "Succeeded"
+	ReasonFailed    string = "Failed"
+	ReasonInvalid   string = "Invalid"
 )
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status"
+//+kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 
 // DKIMKey is the Schema for the dkimkeys API.
 type DKIMKey struct {
@@ -68,6 +86,16 @@ type DKIMKey struct {
 
 	Spec   DKIMKeySpec   `json:"spec"`
 	Status DKIMKeyStatus `json:"status,omitempty"`
+}
+
+// IsReady returns true if the DKIMKey has a Ready condition with status True.
+func (d *DKIMKey) IsReady() bool {
+	for _, c := range d.Status.Conditions {
+		if c.Type == ConditionReady && c.Status == metav1.ConditionTrue {
+			return true
+		}
+	}
+	return false
 }
 
 //+kubebuilder:object:root=true
