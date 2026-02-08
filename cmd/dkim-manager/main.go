@@ -38,6 +38,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v4"
 	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
+	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 	"github.com/hsn723/dkim-manager/controllers"
 	"github.com/hsn723/dkim-manager/hooks"
 	//+kubebuilder:scaffold:imports
@@ -56,6 +57,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(dkimmanagerv1.AddToScheme(scheme))
+	utilruntime.Must(dkimmanagerv2.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -154,6 +156,12 @@ func main() {
 		hooks.SetupDKIMKeyWebhook(mgr, &dec)
 		hooks.SetupDNSEndpointWebhook(mgr, &dec, serviceAccount)
 		hooks.SetupSecretWebhook(mgr, &dec, serviceAccount)
+
+		if err := ctrl.NewWebhookManagedBy(mgr, &dkimmanagerv2.DKIMKey{}).
+			Complete(); err != nil {
+			setupLog.Error(err, "unable to create conversion webhook", "webhook", "DKIMKey")
+			os.Exit(1)
+		}
 	}
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

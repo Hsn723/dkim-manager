@@ -35,14 +35,15 @@ webhooks:
     service:
       name: '{{ template "project.fullname" . }}-webhook-service'
       namespace: '{{ .Release.Namespace }}'
-      path: /validate-dkim-manager-atelierhsn-com-v1-dkimkey
+      path: /validate-dkim-manager-atelierhsn-com-v2-dkimkey
   failurePolicy: Fail
+  matchPolicy: Equivalent
   name: vdkimkey.kb.io
   rules:
   - apiGroups:
     - dkim-manager.atelierhsn.com
     apiVersions:
-    - v1
+    - v2
     operations:
     - UPDATE
     resources:

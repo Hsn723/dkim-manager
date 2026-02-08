@@ -9,7 +9,7 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
+	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 	"github.com/hsn723/dkim-manager/pkg/externaldns"
 )
 
@@ -53,7 +53,7 @@ var _ = Describe("DNSEndpoint webhook", func() {
 		shouldCreateNamespace(ctx, namespace)
 		shouldCreateDKIMKey(ctx, name, namespace, dummyDKIMKeySpec(name))
 
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		key := client.ObjectKey{
 			Namespace: namespace,
 			Name:      name,
@@ -77,8 +77,8 @@ var _ = Describe("DNSEndpoint webhook", func() {
 		}
 		de.SetOwnerReferences([]v1.OwnerReference{
 			{
-				APIVersion: dkimmanagerv1.GroupVersion.String(),
-				Kind:       dkimmanagerv1.DKIMKeyKind,
+				APIVersion: dkimmanagerv2.GroupVersion.String(),
+				Kind:       dkimmanagerv2.DKIMKeyKind,
 				Name:       dk.GetName(),
 				UID:        dk.GetUID(),
 			},

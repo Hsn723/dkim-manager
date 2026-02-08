@@ -7,7 +7,7 @@ import (
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
+	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 )
 
 var _ = Describe("DKIMKey webhook", func() {
@@ -19,7 +19,7 @@ var _ = Describe("DKIMKey webhook", func() {
 		shouldCreateNamespace(ctx, namespace)
 		shouldCreateDKIMKey(ctx, name, namespace, dummyDKIMKeySpec(name))
 
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		key := client.ObjectKey{
 			Namespace: namespace,
 			Name:      name,
@@ -42,7 +42,7 @@ var _ = Describe("DKIMKey webhook", func() {
 		shouldCreateNamespace(ctx, namespace)
 		shouldCreateDKIMKey(ctx, name, namespace, dummyDKIMKeySpec(name))
 
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		key := client.ObjectKey{
 			Namespace: namespace,
 			Name:      name,
@@ -63,7 +63,7 @@ var _ = Describe("DKIMKey webhook", func() {
 		shouldCreateNamespace(ctx, namespace)
 		shouldCreateDKIMKey(ctx, name, namespace, dummyDKIMKeySpec(name))
 
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		key := client.ObjectKey{
 			Namespace: namespace,
 			Name:      name,

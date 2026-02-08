@@ -11,10 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
+	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 )
 
-//+kubebuilder:webhook:path=/validate-dkim-manager-atelierhsn-com-v1-dkimkey,mutating=false,failurePolicy=fail,sideEffects=None,groups=dkim-manager.atelierhsn.com,resources=dkimkeys,verbs=update,versions=v1,name=vdkimkey.kb.io,admissionReviewVersions={v1}
+//+kubebuilder:webhook:path=/validate-dkim-manager-atelierhsn-com-v2-dkimkey,mutating=false,failurePolicy=fail,sideEffects=None,groups=dkim-manager.atelierhsn.com,resources=dkimkeys,verbs=update,versions=v2,name=vdkimkey.kb.io,admissionReviewVersions={v1},matchPolicy=Equivalent
 
 type dkimKeyValidator struct {
 	client.Client
@@ -34,12 +34,12 @@ func (v *dkimKeyValidator) Handle(ctx context.Context, req admission.Request) ad
 }
 
 func (v *dkimKeyValidator) handleUpdate(req admission.Request) admission.Response {
-	dkNew := &dkimmanagerv1.DKIMKey{}
+	dkNew := &dkimmanagerv2.DKIMKey{}
 	decoder := *v.dec
 	if err := decoder.Decode(req, dkNew); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
-	dkOld := &dkimmanagerv1.DKIMKey{}
+	dkOld := &dkimmanagerv2.DKIMKey{}
 	if err := decoder.DecodeRaw(req.OldObject, dkOld); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -58,5 +58,5 @@ func SetupDKIMKeyWebhook(mgr manager.Manager, dec *admission.Decoder) {
 		dec:    dec,
 	}
 	srv := mgr.GetWebhookServer()
-	srv.Register("/validate-dkim-manager-atelierhsn-com-v1-dkimkey", &webhook.Admission{Handler: v})
+	srv.Register("/validate-dkim-manager-atelierhsn-com-v2-dkimkey", &webhook.Admission{Handler: v})
 }

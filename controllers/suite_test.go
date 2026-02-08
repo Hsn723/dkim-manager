@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
+	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -77,6 +78,8 @@ var _ = BeforeSuite(func() {
 	err = clientgoscheme.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = dkimmanagerv1.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+	err = dkimmanagerv2.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme

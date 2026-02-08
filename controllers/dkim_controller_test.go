@@ -17,7 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
+	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 	"github.com/hsn723/dkim-manager/pkg/dkim"
 	"github.com/hsn723/dkim-manager/pkg/externaldns"
 )
@@ -93,10 +93,10 @@ var _ = Describe("DKIMKey controller", func() {
 		shouldCreateNamespace(ctx, namespace)
 
 		By("creating DKIMKey")
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		dk.SetName(name)
 		dk.SetNamespace(namespace)
-		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+		dk.Spec = dkimmanagerv2.DKIMKeySpec{
 			SecretName: name,
 			Selector:   "selector1",
 			Domain:     "atelierhsn.com",
@@ -126,7 +126,7 @@ var _ = Describe("DKIMKey controller", func() {
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusOK))
+		Expect(dk.IsReady()).To(BeTrue())
 	})
 
 	It("should give up early when DNSEndpoint already exists", func() {
@@ -152,10 +152,10 @@ var _ = Describe("DKIMKey controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating DKIMKey")
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		dk.SetName(name)
 		dk.SetNamespace(namespace)
-		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+		dk.Spec = dkimmanagerv2.DKIMKeySpec{
 			SecretName: name,
 			Selector:   "selector1",
 			Domain:     "atelierhsn.com",
@@ -183,7 +183,7 @@ var _ = Describe("DKIMKey controller", func() {
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusInvalid))
+		Expect(dk.IsReady()).To(BeFalse())
 	})
 
 	It("should give up early when Secret already exists", func() {
@@ -203,10 +203,10 @@ var _ = Describe("DKIMKey controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating DKIMKey")
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		dk.SetName(name)
 		dk.SetNamespace(namespace)
-		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+		dk.Spec = dkimmanagerv2.DKIMKeySpec{
 			SecretName: name,
 			Selector:   "selector1",
 			Domain:     "atelierhsn.com",
@@ -233,7 +233,7 @@ var _ = Describe("DKIMKey controller", func() {
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusInvalid))
+		Expect(dk.IsReady()).To(BeFalse())
 	})
 
 	It("should cascade delete generated resources", func() {
@@ -246,10 +246,10 @@ var _ = Describe("DKIMKey controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating DKIMKey")
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		dk.SetName(name)
 		dk.SetNamespace(namespace)
-		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+		dk.Spec = dkimmanagerv2.DKIMKeySpec{
 			SecretName: name,
 			Selector:   "selector1",
 			Domain:     "atelierhsn.com",
@@ -306,10 +306,10 @@ var _ = Describe("DKIMKey controller", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating DKIMKeys")
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		dk.SetName(dk1Name)
 		dk.SetNamespace(namespace)
-		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+		dk.Spec = dkimmanagerv2.DKIMKeySpec{
 			SecretName: dk1Name,
 			Selector:   "selector1",
 			Domain:     "atelierhsn.com",
@@ -317,10 +317,10 @@ var _ = Describe("DKIMKey controller", func() {
 			KeyType:    dkim.KeyTypeED25519,
 		}
 
-		dk2 := &dkimmanagerv1.DKIMKey{}
+		dk2 := &dkimmanagerv2.DKIMKey{}
 		dk2.SetName(dk2Name)
 		dk2.SetNamespace(namespace)
-		dk2.Spec = dkimmanagerv1.DKIMKeySpec{
+		dk2.Spec = dkimmanagerv2.DKIMKeySpec{
 			SecretName: dk2Name,
 			Selector:   "selector2",
 			Domain:     "atelierhsn.com",
@@ -425,10 +425,10 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating DKIMKey")
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		dk.SetName(name)
 		dk.SetNamespace(namespace)
-		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+		dk.Spec = dkimmanagerv2.DKIMKeySpec{
 			SecretName: name,
 			Selector:   "selector1",
 			Domain:     "atelierhsn.com",
@@ -458,7 +458,7 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusOK))
+		Expect(dk.IsReady()).To(BeTrue())
 	})
 
 	It("should ignore resources in invalid namespaces", func() {
@@ -470,10 +470,10 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		By("creating DKIMKey")
-		dk := &dkimmanagerv1.DKIMKey{}
+		dk := &dkimmanagerv2.DKIMKey{}
 		dk.SetName(name)
 		dk.SetNamespace(namespace)
-		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+		dk.Spec = dkimmanagerv2.DKIMKeySpec{
 			SecretName: name,
 			Selector:   "selector1",
 			Domain:     "atelierhsn.com",
@@ -495,6 +495,6 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusInvalid))
+		Expect(dk.IsReady()).To(BeFalse())
 	})
 })

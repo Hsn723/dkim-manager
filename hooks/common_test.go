@@ -7,12 +7,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
+	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 	"github.com/hsn723/dkim-manager/pkg/dkim"
 )
 
-func dummyDKIMKeySpec(name string) dkimmanagerv1.DKIMKeySpec {
-	return dkimmanagerv1.DKIMKeySpec{
+func dummyDKIMKeySpec(name string) dkimmanagerv2.DKIMKeySpec {
+	return dkimmanagerv2.DKIMKeySpec{
 		SecretName: name,
 		Selector:   "selector1",
 		Domain:     "atelierhsn.com",
@@ -30,9 +30,9 @@ func shouldCreateNamespace(ctx context.Context, namespace string) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func shouldCreateDKIMKey(ctx context.Context, name, namespace string, spec dkimmanagerv1.DKIMKeySpec) {
+func shouldCreateDKIMKey(ctx context.Context, name, namespace string, spec dkimmanagerv2.DKIMKeySpec) {
 	By("creating DKIMKey")
-	dk := &dkimmanagerv1.DKIMKey{}
+	dk := &dkimmanagerv2.DKIMKey{}
 	dk.SetName(name)
 	dk.SetNamespace(namespace)
 	dk.Spec = spec
