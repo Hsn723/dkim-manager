@@ -27,256 +27,207 @@ import (
 	"github.com/hsn723/dkim-manager/pkg/dkim"
 )
 
-func TestConvertTo_OK(t *testing.T) {
-	src := &DKIMKey{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-key",
-			Namespace:  "default",
-			Generation: 3,
+func TestConvertTo(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name               string
+		status             DKIMKeyStatus
+		generation         int64
+		wantConditionCount int
+		wantCondStatus     metav1.ConditionStatus
+		wantCondReason     string
+		wantObservedGen    int64
+	}{
+		{
+			name:               "OK",
+			status:             DKIMKeyStatusOK,
+			generation:         3,
+			wantConditionCount: 1,
+			wantCondStatus:     metav1.ConditionTrue,
+			wantCondReason:     dkimmanagerv2.ReasonSucceeded,
+			wantObservedGen:    3,
 		},
-		Spec: DKIMKeySpec{
-			SecretName: "my-secret",
-			Selector:   "selector1",
-			Domain:     "example.com",
-			TTL:        3600,
-			KeyLength:  dkim.KeyLength2048,
-			KeyType:    dkim.KeyTypeRSA,
+		{
+			name:               "Invalid",
+			status:             DKIMKeyStatusInvalid,
+			generation:         2,
+			wantConditionCount: 1,
+			wantCondStatus:     metav1.ConditionFalse,
+			wantCondReason:     dkimmanagerv2.ReasonInvalid,
+			wantObservedGen:    2,
 		},
-		Status: DKIMKeyStatusOK,
+		{
+			name:               "Empty",
+			status:             "",
+			wantConditionCount: 0,
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			src := &DKIMKey{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-key",
+					Namespace:  "default",
+					Generation: tt.generation,
+				},
+				Spec: DKIMKeySpec{
+					SecretName: "my-secret",
+					Selector:   "selector1",
+					Domain:     "example.com",
+					TTL:        3600,
+					KeyLength:  dkim.KeyLength2048,
+					KeyType:    dkim.KeyTypeRSA,
+				},
+				Status: tt.status,
+			}
 
-	dst := &dkimmanagerv2.DKIMKey{}
-	err := src.ConvertTo(dst)
-	require.NoError(t, err)
+			dst := &dkimmanagerv2.DKIMKey{}
+			err := src.ConvertTo(dst)
+			require.NoError(t, err)
 
-	assert.Equal(t, src.Name, dst.Name)
-	assert.Equal(t, src.Namespace, dst.Namespace)
-	assert.Equal(t, src.Spec.SecretName, dst.Spec.SecretName)
-	assert.Equal(t, src.Spec.Selector, dst.Spec.Selector)
-	assert.Equal(t, src.Spec.Domain, dst.Spec.Domain)
-	assert.Equal(t, src.Spec.TTL, dst.Spec.TTL)
-	assert.Equal(t, src.Spec.KeyLength, dst.Spec.KeyLength)
-	assert.Equal(t, src.Spec.KeyType, dst.Spec.KeyType)
+			assert.Equal(t, src.Name, dst.Name)
+			assert.Equal(t, src.Namespace, dst.Namespace)
+			assert.Equal(t, src.Spec.SecretName, dst.Spec.SecretName)
+			assert.Equal(t, src.Spec.Selector, dst.Spec.Selector)
+			assert.Equal(t, src.Spec.Domain, dst.Spec.Domain)
+			assert.Equal(t, src.Spec.TTL, dst.Spec.TTL)
+			assert.Equal(t, src.Spec.KeyLength, dst.Spec.KeyLength)
+			assert.Equal(t, src.Spec.KeyType, dst.Spec.KeyType)
 
-	require.Len(t, dst.Status.Conditions, 1)
-	assert.Equal(t, dkimmanagerv2.ConditionReady, dst.Status.Conditions[0].Type)
-	assert.Equal(t, metav1.ConditionTrue, dst.Status.Conditions[0].Status)
-	assert.Equal(t, dkimmanagerv2.ReasonSucceeded, dst.Status.Conditions[0].Reason)
-	assert.Equal(t, int64(3), dst.Status.ObservedGeneration)
-	assert.Equal(t, int64(3), dst.Status.Conditions[0].ObservedGeneration)
+			require.Len(t, dst.Status.Conditions, tt.wantConditionCount)
+			if tt.wantConditionCount > 0 {
+				assert.Equal(t, dkimmanagerv2.ConditionReady, dst.Status.Conditions[0].Type)
+				assert.Equal(t, tt.wantCondStatus, dst.Status.Conditions[0].Status)
+				assert.Equal(t, tt.wantCondReason, dst.Status.Conditions[0].Reason)
+				assert.Equal(t, tt.wantObservedGen, dst.Status.ObservedGeneration)
+				assert.Equal(t, tt.wantObservedGen, dst.Status.Conditions[0].ObservedGeneration)
+			}
+		})
+	}
 }
 
-func TestConvertTo_Invalid(t *testing.T) {
-	src := &DKIMKey{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-key",
-			Namespace:  "default",
-			Generation: 2,
-		},
-		Spec: DKIMKeySpec{
-			SecretName: "my-secret",
-			Selector:   "selector1",
-			Domain:     "example.com",
-		},
-		Status: DKIMKeyStatusInvalid,
-	}
-
-	dst := &dkimmanagerv2.DKIMKey{}
-	err := src.ConvertTo(dst)
-	require.NoError(t, err)
-
-	require.Len(t, dst.Status.Conditions, 1)
-	assert.Equal(t, dkimmanagerv2.ConditionReady, dst.Status.Conditions[0].Type)
-	assert.Equal(t, metav1.ConditionFalse, dst.Status.Conditions[0].Status)
-	assert.Equal(t, dkimmanagerv2.ReasonInvalid, dst.Status.Conditions[0].Reason)
-	assert.Equal(t, int64(2), dst.Status.ObservedGeneration)
-	assert.Equal(t, int64(2), dst.Status.Conditions[0].ObservedGeneration)
-}
-
-func TestConvertTo_Empty(t *testing.T) {
-	src := &DKIMKey{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-key",
-			Namespace: "default",
-		},
-		Spec: DKIMKeySpec{
-			SecretName: "my-secret",
-			Selector:   "selector1",
-			Domain:     "example.com",
-		},
-		Status: "",
-	}
-
-	dst := &dkimmanagerv2.DKIMKey{}
-	err := src.ConvertTo(dst)
-	require.NoError(t, err)
-
-	assert.Empty(t, dst.Status.Conditions)
-}
-
-func TestConvertFrom_Ready(t *testing.T) {
-	src := &dkimmanagerv2.DKIMKey{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-key",
-			Namespace: "default",
-		},
-		Spec: dkimmanagerv2.DKIMKeySpec{
-			SecretName: "my-secret",
-			Selector:   "selector1",
-			Domain:     "example.com",
-			TTL:        3600,
-			KeyLength:  dkim.KeyLength2048,
-			KeyType:    dkim.KeyTypeRSA,
-		},
-		Status: dkimmanagerv2.DKIMKeyStatus{
-			ObservedGeneration: 1,
-			Conditions: []metav1.Condition{
+func TestConvertFrom(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name       string
+		conditions []metav1.Condition
+		observedGen int64
+		wantStatus DKIMKeyStatus
+	}{
+		{
+			name: "Ready",
+			conditions: []metav1.Condition{
 				{
 					Type:   dkimmanagerv2.ConditionReady,
 					Status: metav1.ConditionTrue,
 					Reason: dkimmanagerv2.ReasonSucceeded,
 				},
 			},
+			observedGen: 1,
+			wantStatus:  DKIMKeyStatusOK,
 		},
-	}
-
-	dst := &DKIMKey{}
-	err := dst.ConvertFrom(src)
-	require.NoError(t, err)
-
-	assert.Equal(t, src.Name, dst.Name)
-	assert.Equal(t, src.Namespace, dst.Namespace)
-	assert.Equal(t, src.Spec.SecretName, dst.Spec.SecretName)
-	assert.Equal(t, DKIMKeyStatusOK, dst.Status)
-}
-
-func TestConvertFrom_NotReady(t *testing.T) {
-	src := &dkimmanagerv2.DKIMKey{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-key",
-			Namespace: "default",
-		},
-		Spec: dkimmanagerv2.DKIMKeySpec{
-			SecretName: "my-secret",
-			Selector:   "selector1",
-			Domain:     "example.com",
-		},
-		Status: dkimmanagerv2.DKIMKeyStatus{
-			Conditions: []metav1.Condition{
+		{
+			name: "NotReady",
+			conditions: []metav1.Condition{
 				{
 					Type:   dkimmanagerv2.ConditionReady,
 					Status: metav1.ConditionFalse,
 					Reason: dkimmanagerv2.ReasonInvalid,
 				},
 			},
+			wantStatus: DKIMKeyStatusInvalid,
+		},
+		{
+			name:       "NoConditions",
+			conditions: nil,
+			wantStatus: "",
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			src := &dkimmanagerv2.DKIMKey{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-key",
+					Namespace: "default",
+				},
+				Spec: dkimmanagerv2.DKIMKeySpec{
+					SecretName: "my-secret",
+					Selector:   "selector1",
+					Domain:     "example.com",
+					TTL:        3600,
+					KeyLength:  dkim.KeyLength2048,
+					KeyType:    dkim.KeyTypeRSA,
+				},
+				Status: dkimmanagerv2.DKIMKeyStatus{
+					ObservedGeneration: tt.observedGen,
+					Conditions:         tt.conditions,
+				},
+			}
 
-	dst := &DKIMKey{}
-	err := dst.ConvertFrom(src)
-	require.NoError(t, err)
+			dst := &DKIMKey{}
+			err := dst.ConvertFrom(src)
+			require.NoError(t, err)
 
-	assert.Equal(t, DKIMKeyStatusInvalid, dst.Status)
+			assert.Equal(t, src.Name, dst.Name)
+			assert.Equal(t, src.Namespace, dst.Namespace)
+			assert.Equal(t, src.Spec.SecretName, dst.Spec.SecretName)
+			assert.Equal(t, tt.wantStatus, dst.Status)
+		})
+	}
 }
 
-func TestConvertFrom_NoConditions(t *testing.T) {
-	src := &dkimmanagerv2.DKIMKey{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-key",
-			Namespace: "default",
+func TestRoundTrip(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name   string
+		status DKIMKeyStatus
+	}{
+		{
+			name:   "OK",
+			status: DKIMKeyStatusOK,
 		},
-		Spec: dkimmanagerv2.DKIMKeySpec{
-			SecretName: "my-secret",
-			Selector:   "selector1",
-			Domain:     "example.com",
+		{
+			name:   "Invalid",
+			status: DKIMKeyStatusInvalid,
 		},
-		Status: dkimmanagerv2.DKIMKeyStatus{},
+		{
+			name:   "Empty",
+			status: "",
+		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			original := &DKIMKey{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-key",
+					Namespace: "default",
+				},
+				Spec: DKIMKeySpec{
+					SecretName: "my-secret",
+					Selector:   "selector1",
+					Domain:     "example.com",
+					TTL:        3600,
+					KeyLength:  dkim.KeyLength2048,
+					KeyType:    dkim.KeyTypeRSA,
+				},
+				Status: tt.status,
+			}
 
-	dst := &DKIMKey{}
-	err := dst.ConvertFrom(src)
-	require.NoError(t, err)
+			hub := &dkimmanagerv2.DKIMKey{}
+			err := original.ConvertTo(hub)
+			require.NoError(t, err)
 
-	assert.Equal(t, DKIMKeyStatus(""), dst.Status)
-}
+			roundTripped := &DKIMKey{}
+			err = roundTripped.ConvertFrom(hub)
+			require.NoError(t, err)
 
-func TestRoundTrip_OK(t *testing.T) {
-	original := &DKIMKey{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-key",
-			Namespace: "default",
-		},
-		Spec: DKIMKeySpec{
-			SecretName: "my-secret",
-			Selector:   "selector1",
-			Domain:     "example.com",
-			TTL:        3600,
-			KeyLength:  dkim.KeyLength2048,
-			KeyType:    dkim.KeyTypeRSA,
-		},
-		Status: DKIMKeyStatusOK,
+			assert.Equal(t, original.Name, roundTripped.Name)
+			assert.Equal(t, original.Namespace, roundTripped.Namespace)
+			assert.Equal(t, original.Spec, roundTripped.Spec)
+			assert.Equal(t, original.Status, roundTripped.Status)
+		})
 	}
-
-	hub := &dkimmanagerv2.DKIMKey{}
-	err := original.ConvertTo(hub)
-	require.NoError(t, err)
-
-	roundTripped := &DKIMKey{}
-	err = roundTripped.ConvertFrom(hub)
-	require.NoError(t, err)
-
-	assert.Equal(t, original.Name, roundTripped.Name)
-	assert.Equal(t, original.Namespace, roundTripped.Namespace)
-	assert.Equal(t, original.Spec, roundTripped.Spec)
-	assert.Equal(t, original.Status, roundTripped.Status)
-}
-
-func TestRoundTrip_Invalid(t *testing.T) {
-	original := &DKIMKey{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-key",
-			Namespace: "default",
-		},
-		Spec: DKIMKeySpec{
-			SecretName: "my-secret",
-			Selector:   "selector1",
-			Domain:     "example.com",
-		},
-		Status: DKIMKeyStatusInvalid,
-	}
-
-	hub := &dkimmanagerv2.DKIMKey{}
-	err := original.ConvertTo(hub)
-	require.NoError(t, err)
-
-	roundTripped := &DKIMKey{}
-	err = roundTripped.ConvertFrom(hub)
-	require.NoError(t, err)
-
-	assert.Equal(t, original.Status, roundTripped.Status)
-}
-
-func TestRoundTrip_Empty(t *testing.T) {
-	original := &DKIMKey{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-key",
-			Namespace: "default",
-		},
-		Spec: DKIMKeySpec{
-			SecretName: "my-secret",
-			Selector:   "selector1",
-			Domain:     "example.com",
-		},
-		Status: "",
-	}
-
-	hub := &dkimmanagerv2.DKIMKey{}
-	err := original.ConvertTo(hub)
-	require.NoError(t, err)
-
-	roundTripped := &DKIMKey{}
-	err = roundTripped.ConvertFrom(hub)
-	require.NoError(t, err)
-
-	assert.Equal(t, original.Status, roundTripped.Status)
 }

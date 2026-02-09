@@ -5,19 +5,12 @@ import (
 	"net/http"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/hsn723/dkim-manager/pkg/externaldns"
-)
-
-const (
-	dkimKeyKind = "DKIMKey"
-	apiGroup    = "dkim-manager.atelierhsn.com"
 )
 
 //+kubebuilder:webhook:path=/validate-externaldns-k8s-io-v1alpha1-dnsendpoint,mutating=false,failurePolicy=fail,sideEffects=None,groups=externaldns.k8s.io,resources=dnsendpoints,verbs=delete,versions=v1alpha1,name=vdnsendpoint.kb.io,admissionReviewVersions={v1}
@@ -38,17 +31,6 @@ func (v *dnsEndpointValidator) Handle(ctx context.Context, req admission.Request
 	default:
 		return admission.Allowed("")
 	}
-}
-
-func isDKIMKeyOwner(owner v1.OwnerReference) bool {
-	if owner.Kind != dkimKeyKind {
-		return false
-	}
-	gv, err := schema.ParseGroupVersion(owner.APIVersion)
-	if err != nil {
-		return false
-	}
-	return gv.Group == apiGroup
 }
 
 func (v *dnsEndpointValidator) handleDelete(req admission.Request) admission.Response {

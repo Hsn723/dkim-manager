@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
 	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 	"github.com/hsn723/dkim-manager/pkg/dkim"
 	"github.com/hsn723/dkim-manager/pkg/externaldns"
@@ -496,5 +497,120 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
 		Expect(dk.IsReady()).To(BeFalse())
+	})
+})
+
+var _ = Describe("DKIMKey v1/v2 conversion", func() {
+	ctx := context.Background()
+	var stopFunc func()
+
+	BeforeEach(func() {
+		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+			Scheme:         scheme,
+			LeaderElection: false,
+			Metrics:        metricsserver.Options{BindAddress: "0"},
+			Controller: config.Controller{
+				SkipNameValidation: ptr.To(true),
+			},
+		})
+		Expect(err).NotTo(HaveOccurred())
+		reconciler := &DKIMKeyReconciler{
+			Client:     mgr.GetClient(),
+			Scheme:     mgr.GetScheme(),
+			Log:        ctrl.Log.WithName("controllers").WithName("DKIMKey"),
+			ReadClient: mgr.GetAPIReader(),
+		}
+		err = reconciler.SetupWithManager(mgr)
+		Expect(err).NotTo(HaveOccurred())
+
+		ctx, cancel := context.WithCancel(ctx)
+		stopFunc = cancel
+		go func() {
+			err := mgr.Start(ctx)
+			if err != nil {
+				panic(err)
+			}
+		}()
+		time.Sleep(100 * time.Millisecond)
+	})
+
+	AfterEach(func() {
+		stopFunc()
+		time.Sleep(100 * time.Millisecond)
+	})
+
+	It("should reconcile a DKIMKey created via v1 API", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+
+		By("creating DKIMKey via v1 API")
+		dk := &dkimmanagerv1.DKIMKey{}
+		dk.SetName(name)
+		dk.SetNamespace(namespace)
+		dk.Spec = dkimmanagerv1.DKIMKeySpec{
+			SecretName: name,
+			Selector:   "selector1",
+			Domain:     "atelierhsn.com",
+			TTL:        3600,
+			KeyLength:  dkim.KeyLength2048,
+			KeyType:    dkim.KeyTypeRSA,
+		}
+
+		err := k8sClient.Create(ctx, dk)
+		Expect(err).NotTo(HaveOccurred())
+
+		By("verifying resources are created")
+		Eventually(func() error {
+			return getSecret(ctx, name, namespace)
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			return getDNSEndpoint(ctx, name, namespace)
+		}).Should(Succeed())
+
+		By("reading back via v1 and checking status")
+		v1Key := &dkimmanagerv1.DKIMKey{}
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), v1Key)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(v1Key.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusOK))
+
+		By("reading back via v2 and checking status")
+		v2Key := &dkimmanagerv2.DKIMKey{}
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), v2Key)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(v2Key.IsReady()).To(BeTrue())
+	})
+
+	It("should show correct v1 status for a DKIMKey created via v2 API", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+
+		By("creating DKIMKey via v2 API")
+		dk := &dkimmanagerv2.DKIMKey{}
+		dk.SetName(name)
+		dk.SetNamespace(namespace)
+		dk.Spec = dkimmanagerv2.DKIMKeySpec{
+			SecretName: name,
+			Selector:   "selector1",
+			Domain:     "atelierhsn.com",
+			TTL:        3600,
+			KeyLength:  dkim.KeyLength2048,
+			KeyType:    dkim.KeyTypeRSA,
+		}
+
+		err := k8sClient.Create(ctx, dk)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func() error {
+			return getSecret(ctx, name, namespace)
+		}).Should(Succeed())
+
+		By("reading back via v1 and checking status")
+		v1Key := &dkimmanagerv1.DKIMKey{}
+		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), v1Key)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(v1Key.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusOK))
 	})
 })

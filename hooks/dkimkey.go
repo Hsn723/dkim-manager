@@ -6,6 +6,8 @@ import (
 
 	admissionv1 "k8s.io/api/admission/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -13,6 +15,22 @@ import (
 
 	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 )
+
+const (
+	dkimKeyKind = "DKIMKey"
+	apiGroup    = "dkim-manager.atelierhsn.com"
+)
+
+func isDKIMKeyOwner(owner v1.OwnerReference) bool {
+	if owner.Kind != dkimKeyKind {
+		return false
+	}
+	gv, err := schema.ParseGroupVersion(owner.APIVersion)
+	if err != nil {
+		return false
+	}
+	return gv.Group == apiGroup
+}
 
 //+kubebuilder:webhook:path=/validate-dkim-manager-atelierhsn-com-v2-dkimkey,mutating=false,failurePolicy=fail,sideEffects=None,groups=dkim-manager.atelierhsn.com,resources=dkimkeys,verbs=update,versions=v2,name=vdkimkey.kb.io,admissionReviewVersions={v1},matchPolicy=Equivalent
 
