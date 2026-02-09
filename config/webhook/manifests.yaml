@@ -10,10 +10,28 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /validate-dkim-manager-atelierhsn-com-v1-dkimkey
+  failurePolicy: Fail
+  name: vdkimkey.kb.io
+  rules:
+  - apiGroups:
+    - dkim-manager.atelierhsn.com
+    apiVersions:
+    - v1
+    operations:
+    - UPDATE
+    resources:
+    - dkimkeys
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /validate-dkim-manager-atelierhsn-com-v2-dkimkey
   failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: vdkimkey.kb.io
+  name: vdkimkeyv2.kb.io
   rules:
   - apiGroups:
     - dkim-manager.atelierhsn.com

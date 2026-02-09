@@ -98,8 +98,12 @@ var _ = BeforeSuite(func() {
 
 	dec := admission.NewDecoder(scheme)
 	SetupDKIMKeyWebhook(mgr, &dec)
+	SetupDKIMKeyV2Webhook(mgr, &dec)
 	SetupDNSEndpointWebhook(mgr, &dec, "dummy")
 	SetupSecretWebhook(mgr, &dec, "dummy")
+
+	err = ctrl.NewWebhookManagedBy(mgr, &dkimmanagerv2.DKIMKey{}).Complete()
+	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
 		defer GinkgoRecover()

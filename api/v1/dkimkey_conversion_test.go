@@ -110,10 +110,10 @@ func TestConvertTo(t *testing.T) {
 func TestConvertFrom(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name       string
-		conditions []metav1.Condition
+		name        string
+		conditions  []metav1.Condition
 		observedGen int64
-		wantStatus DKIMKeyStatus
+		wantStatus  DKIMKeyStatus
 	}{
 		{
 			name: "Ready",

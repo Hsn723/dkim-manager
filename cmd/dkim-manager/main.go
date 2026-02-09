@@ -154,6 +154,7 @@ func main() {
 
 	if webhooksEnabled {
 		hooks.SetupDKIMKeyWebhook(mgr, &dec)
+		hooks.SetupDKIMKeyV2Webhook(mgr, &dec)
 		hooks.SetupDNSEndpointWebhook(mgr, &dec, serviceAccount)
 		hooks.SetupSecretWebhook(mgr, &dec, serviceAccount)
 
