@@ -25,11 +25,23 @@ jobs:
         run: |
           helm repo add external-dns https://kubernetes-sigs.github.io/external-dns
           helm repo update
+      # TODO: Remove once https://github.com/helm/chart-releaser/pull/587 is merged and released
+      - uses: actions/setup-go@v6
+      - name: Build interim chart-releaser
+        run: |
+          curl -sSL -o chart-releaser.tar.gz "https://github.com/helm/chart-releaser/archive/refs/tags/v1.8.1.tar.gz"
+          tar -xzf chart-releaser.tar.gz
+          cd chart-releaser-1.8.1
+          curl -sSL -o 587.patch "https://patch-diff.githubusercontent.com/raw/helm/chart-releaser/pull/587.patch"
+          git apply 587.patch
+          go build -o ${{ runner.tool_cache }}/cr/patched/cr ./cr
+      # End TODO
       - name: Run chart-releaser
         uses: helm/chart-releaser-action@v1.7.0
         with:
           mark_as_latest: false
           skip_existing: true
+          install_dir: ${{ runner.tool_cache }}/cr/patched # TODO: Remove once https://github.com/helm/chart-releaser/pull/587 is merged and released
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CR_RELEASE_NAME_TEMPLATE: "helm-v{{ .Version }}"
