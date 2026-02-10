@@ -21,8 +21,6 @@ jobs:
             git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
       - name: Install Helm
         uses: azure/setup-helm@v4
-        with:
-          version: v3.10.0
       - name: Manually add dependencies
         run: |
           helm repo add external-dns https://kubernetes-sigs.github.io/external-dns
@@ -31,6 +29,7 @@ jobs:
         uses: helm/chart-releaser-action@v1.7.0
         with:
           mark_as_latest: false
+          skip_existing: true
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CR_RELEASE_NAME_TEMPLATE: "helm-v{{ .Version }}"

@@ -1,6 +1,6 @@
 PROJECT_NAME = dkim-manager
 CERT_MANAGER_VERSION = 1.6.1
-KUBERNETES_VERSION = $(shell curl -L -s https://dl.k8s.io/release/stable.txt)
+KUBERNETES_VERSION = $(shell curl --retry 3 --retry-all-errors -L -s https://dl.k8s.io/release/stable.txt)
 KIND_NODE_TAG = ""
 
 BINDIR = $(dir $(shell pwd))/bin/
@@ -57,14 +57,13 @@ $(KIND):
 
 $(KUBECTL):
 	mkdir -p ../bin
-	curl -sfL -o $@ https://dl.k8s.io/release/$(KUBERNETES_VERSION)/bin/linux/amd64/kubectl
+	curl --retry 3 --retry-all-errors -sfL -o $@ https://dl.k8s.io/release/$(KUBERNETES_VERSION)/bin/linux/amd64/kubectl
 	chmod a+x $@
 
 .PHONY: get-k8s-versions
 get-k8s-versions:
-	@LATEST_VERSION=$$(curl -L -s https://dl.k8s.io/release/stable.txt) && \
-	KIND_TAGS=$$(gh api /repos/kubernetes-sigs/kind/releases/latest | jq -r '.body' | grep -Po '(?<=- v)(?:\d+\.\d+\.\d+: `kindest\/node:v)\K(\d+\.\d+\.\d+@sha256:[a-f0-9]+)') && \
-	LATEST_VERSION_MAJOR=$$(echo $${LATEST_VERSION} | grep -Po '(?<=v)\d+\.\d+') && \
+	@KIND_TAGS=$$(gh api /repos/kubernetes-sigs/kind/releases/latest | jq -r '.body' | grep -Po '(?<=- v)(?:\d+\.\d+\.\d+: `kindest\/node:v)\K(\d+\.\d+\.\d+@sha256:[a-f0-9]+)') && \
+	LATEST_VERSION_MAJOR=$$(echo $(KUBERNETES_VERSION) | grep -Po '(?<=v)\d+\.\d+') && \
 	LATEST_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${LATEST_VERSION_MAJOR}" | sort -u | tail -n 1) && \
 	PREVIOUS_VERSION_MAJOR=$$(echo $${LATEST_VERSION_MAJOR} | awk -F. -v OFS=. '{$$NF -= 1; print}') && \
 	PREVIOUS_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${PREVIOUS_VERSION_MAJOR}" | sort -u | tail -n 1) && \
