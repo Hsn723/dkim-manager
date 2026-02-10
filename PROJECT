@@ -13,4 +13,12 @@ resources:
   kind: DKIMKey
   path: github.com/hsn723/dkim-manager/api/v1
   version: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: atelierhsn.com
+  group: dkim-manager
+  kind: DKIMKey
+  path: github.com/hsn723/dkim-manager/api/v2
+  version: v2
 version: "3"

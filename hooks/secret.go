@@ -10,8 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
 )
 
 //+kubebuilder:webhook:path=/validate-secret,mutating=false,failurePolicy=fail,sideEffects=None,groups="",resources=secrets,verbs=delete,versions=v1,name=vsecret.kb.io,admissionReviewVersions={v1}
@@ -41,7 +39,7 @@ func (v *secretValidator) handleDelete(req admission.Request) admission.Response
 	}
 	owners := s.GetOwnerReferences()
 	for _, owner := range owners {
-		if owner.APIVersion == dkimmanagerv1.GroupVersion.String() && owner.Kind == "DKIMKey" {
+		if isDKIMKeyOwner(owner) {
 			if req.UserInfo.Username == v.serviceAccountName {
 				return admission.Allowed("deletion by service account allowed")
 			}

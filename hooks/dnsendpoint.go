@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
-	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
 	"github.com/hsn723/dkim-manager/pkg/externaldns"
 )
 
@@ -41,7 +40,7 @@ func (v *dnsEndpointValidator) handleDelete(req admission.Request) admission.Res
 	}
 	owners := de.GetOwnerReferences()
 	for _, owner := range owners {
-		if owner.APIVersion == dkimmanagerv1.GroupVersion.String() && owner.Kind == dkimmanagerv1.DKIMKeyKind {
+		if isDKIMKeyOwner(owner) {
 			if req.UserInfo.Username == v.serviceAccountName {
 				return admission.Allowed("deletion by service account allowed")
 			}

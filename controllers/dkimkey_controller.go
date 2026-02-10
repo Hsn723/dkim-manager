@@ -22,8 +22,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/utils/pointer"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,13 +33,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/go-logr/logr"
-	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
+	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 	"github.com/hsn723/dkim-manager/pkg/dkim"
 	"github.com/hsn723/dkim-manager/pkg/externaldns"
 )
 
 const (
 	finalizerName = "dkim-manager.atelierhsn.com/finalizer"
+	apiGroup      = "dkim-manager.atelierhsn.com"
 )
 
 // DKIMKeyReconciler reconciles a DKIMKey object.
@@ -64,17 +67,17 @@ type DKIMKeyReconciler struct {
 func (r *DKIMKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	dk := &dkimmanagerv1.DKIMKey{}
+	dk := &dkimmanagerv2.DKIMKey{}
 	if err := r.Get(ctx, req.NamespacedName, dk); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	if r.Namespace != "" && dk.Namespace != r.Namespace {
-		if dk.Status == dkimmanagerv1.DKIMKeyStatusInvalid {
+		if r.hasCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonInvalid) {
 			return ctrl.Result{}, nil
 		}
 		logger.Info("dkimkey is in an invalid namespace, ignoring")
-		dk.Status = dkimmanagerv1.DKIMKeyStatusInvalid
+		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonInvalid, "DKIMKey is in an invalid namespace")
 		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 
@@ -88,23 +91,52 @@ func (r *DKIMKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, r.finalize(ctx, dk)
 	}
 
-	if dk.Status == dkimmanagerv1.DKIMKeyStatusOK {
+	if dk.IsReady() && dk.Status.ObservedGeneration == dk.Generation {
 		return ctrl.Result{}, nil
 	}
 
 	return r.reconcile(ctx, dk)
 }
 
-func (r *DKIMKeyReconciler) isOwnedByDKIMKey(dk *dkimmanagerv1.DKIMKey, ownerRefs []v1.OwnerReference) bool {
-	for _, owner := range ownerRefs {
-		if owner.APIVersion == dkimmanagerv1.GroupVersion.String() && owner.Kind == dkimmanagerv1.DKIMKeyKind && owner.Name == dk.Name {
+// setCondition updates the status condition on the DKIMKey.
+func (r *DKIMKeyReconciler) setCondition(dk *dkimmanagerv2.DKIMKey, condType string, status v1.ConditionStatus, reason, message string) {
+	dk.Status.ObservedGeneration = dk.Generation
+	meta.SetStatusCondition(&dk.Status.Conditions, v1.Condition{
+		Type:               condType,
+		Status:             status,
+		ObservedGeneration: dk.Generation,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: v1.Now(),
+	})
+}
+
+// hasCondition checks if the DKIMKey has a specific condition.
+func (r *DKIMKeyReconciler) hasCondition(dk *dkimmanagerv2.DKIMKey, condType string, status v1.ConditionStatus, reason string) bool {
+	for _, c := range dk.Status.Conditions {
+		if c.Type == condType && c.Status == status && c.Reason == reason {
 			return true
 		}
 	}
 	return false
 }
 
-func (r *DKIMKeyReconciler) finalize(ctx context.Context, dk *dkimmanagerv1.DKIMKey) error {
+func (r *DKIMKeyReconciler) isOwnedByDKIMKey(dk *dkimmanagerv2.DKIMKey, ownerRefs []v1.OwnerReference) bool {
+	for _, owner := range ownerRefs {
+		if owner.Kind == dkimmanagerv2.DKIMKeyKind && owner.Name == dk.Name {
+			gv, err := schema.ParseGroupVersion(owner.APIVersion)
+			if err != nil {
+				continue
+			}
+			if gv.Group == apiGroup {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (r *DKIMKeyReconciler) finalize(ctx context.Context, dk *dkimmanagerv2.DKIMKey) error {
 	if !controllerutil.ContainsFinalizer(dk, finalizerName) {
 		return nil
 	}
@@ -139,7 +171,7 @@ func (r *DKIMKeyReconciler) finalize(ctx context.Context, dk *dkimmanagerv1.DKIM
 	return r.Update(ctx, dk)
 }
 
-func (r *DKIMKeyReconciler) reconcile(ctx context.Context, dk *dkimmanagerv1.DKIMKey) (ctrl.Result, error) {
+func (r *DKIMKeyReconciler) reconcile(ctx context.Context, dk *dkimmanagerv2.DKIMKey) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	var key []byte
 	var pub string
@@ -150,31 +182,33 @@ func (r *DKIMKeyReconciler) reconcile(ctx context.Context, dk *dkimmanagerv1.DKI
 	case dkim.KeyTypeED25519:
 		key, pub, err = dkim.GenED25519()
 	default:
-		return ctrl.Result{}, fmt.Errorf("invalid key type specified")
+		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonInvalid, "Invalid key type specified")
+		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 	if err != nil {
-		return ctrl.Result{}, err
+		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonFailed, fmt.Sprintf("Failed to generate key: %v", err))
+		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 	if err := r.checkForExistingResources(ctx, dk); err != nil {
 		logger.Error(err, "precondition failed: resource(s) exist")
-		dk.Status = dkimmanagerv1.DKIMKeyStatusInvalid
+		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonInvalid, err.Error())
 		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 	if err := r.reconcileDKIMRecord(ctx, dk, pub); err != nil {
 		logger.Error(err, "failed to reconcile DNSEndpoint")
-		dk.Status = dkimmanagerv1.DKIMKeyStatusInvalid
+		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonFailed, fmt.Sprintf("Failed to reconcile DNSEndpoint: %v", err))
 		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 	if err := r.reconcileDKIMPrivateKey(ctx, dk, key); err != nil {
 		logger.Error(err, "failed to reconcile Secret")
-		dk.Status = dkimmanagerv1.DKIMKeyStatusInvalid
+		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonFailed, fmt.Sprintf("Failed to reconcile Secret: %v", err))
 		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
-	dk.Status = dkimmanagerv1.DKIMKeyStatusOK
+	r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionTrue, dkimmanagerv2.ReasonSucceeded, "DKIM key created successfully")
 	return ctrl.Result{}, r.Status().Update(ctx, dk)
 }
 
-func (r *DKIMKeyReconciler) checkForExistingResources(ctx context.Context, dk *dkimmanagerv1.DKIMKey) error {
+func (r *DKIMKeyReconciler) checkForExistingResources(ctx context.Context, dk *dkimmanagerv2.DKIMKey) error {
 	de := externaldns.DNSEndpoint()
 	deKey := client.ObjectKey{
 		Namespace: dk.Namespace,
@@ -194,7 +228,7 @@ func (r *DKIMKeyReconciler) checkForExistingResources(ctx context.Context, dk *d
 	return nil
 }
 
-func (r *DKIMKeyReconciler) reconcileDKIMRecord(ctx context.Context, dk *dkimmanagerv1.DKIMKey, pub string) error {
+func (r *DKIMKeyReconciler) reconcileDKIMRecord(ctx context.Context, dk *dkimmanagerv2.DKIMKey, pub string) error {
 	logger := log.FromContext(ctx)
 	de := externaldns.DNSEndpoint()
 	de.SetName(dk.Name)
@@ -222,7 +256,7 @@ func (r *DKIMKeyReconciler) reconcileDKIMRecord(ctx context.Context, dk *dkimman
 	return nil
 }
 
-func (r *DKIMKeyReconciler) reconcileDKIMPrivateKey(ctx context.Context, dk *dkimmanagerv1.DKIMKey, key []byte) error {
+func (r *DKIMKeyReconciler) reconcileDKIMPrivateKey(ctx context.Context, dk *dkimmanagerv2.DKIMKey, key []byte) error {
 	logger := log.FromContext(ctx)
 	filename := fmt.Sprintf("%s.%s.key", dk.Spec.Domain, dk.Spec.Selector)
 	s := &corev1.Secret{}
@@ -245,6 +279,6 @@ func (r *DKIMKeyReconciler) reconcileDKIMPrivateKey(ctx context.Context, dk *dki
 // SetupWithManager sets up the controller with the Manager.
 func (r *DKIMKeyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&dkimmanagerv1.DKIMKey{}).
+		For(&dkimmanagerv2.DKIMKey{}).
 		Complete(r)
 }

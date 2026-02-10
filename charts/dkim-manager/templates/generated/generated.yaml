@@ -54,6 +54,25 @@ webhooks:
     service:
       name: '{{ template "project.fullname" . }}-webhook-service'
       namespace: '{{ .Release.Namespace }}'
+      path: /validate-dkim-manager-atelierhsn-com-v2-dkimkey
+  failurePolicy: Fail
+  name: vdkimkeyv2.kb.io
+  rules:
+  - apiGroups:
+    - dkim-manager.atelierhsn.com
+    apiVersions:
+    - v2
+    operations:
+    - UPDATE
+    resources:
+    - dkimkeys
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: '{{ template "project.fullname" . }}-webhook-service'
+      namespace: '{{ .Release.Namespace }}'
       path: /validate-externaldns-k8s-io-v1alpha1-dnsendpoint
   failurePolicy: Fail
   name: vdnsendpoint.kb.io

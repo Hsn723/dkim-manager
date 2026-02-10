@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
+	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -72,6 +73,9 @@ var _ = BeforeSuite(func() {
 	err = dkimmanagerv1.AddToScheme(scheme)
 	Expect(err).NotTo(HaveOccurred())
 
+	err = dkimmanagerv2.AddToScheme(scheme)
+	Expect(err).NotTo(HaveOccurred())
+
 	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
@@ -94,8 +98,12 @@ var _ = BeforeSuite(func() {
 
 	dec := admission.NewDecoder(scheme)
 	SetupDKIMKeyWebhook(mgr, &dec)
+	SetupDKIMKeyV2Webhook(mgr, &dec)
 	SetupDNSEndpointWebhook(mgr, &dec, "dummy")
 	SetupSecretWebhook(mgr, &dec, "dummy")
+
+	err = ctrl.NewWebhookManagedBy(mgr, &dkimmanagerv2.DKIMKey{}).Complete()
+	Expect(err).NotTo(HaveOccurred())
 
 	go func() {
 		defer GinkgoRecover()
