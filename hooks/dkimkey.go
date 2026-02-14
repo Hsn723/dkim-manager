@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	admissionv1 "k8s.io/api/admission/v1"
-	"k8s.io/apimachinery/pkg/api/equality"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -65,8 +64,20 @@ func (v *dkimKeyValidator) handleUpdate(req admission.Request) admission.Respons
 	if dkNew.Name != dkOld.Name {
 		return admission.Denied("changing dkimkey name is not allowed")
 	}
-	if !equality.Semantic.DeepEqual(dkNew.Spec, dkOld.Spec) {
-		return admission.Denied("changing dkimkey spec is not allowed")
+	if dkNew.Spec.Domain != dkOld.Spec.Domain {
+		return admission.Denied("changing dkimkey domain is not allowed")
+	}
+	if dkNew.Spec.KeyLength != dkOld.Spec.KeyLength {
+		return admission.Denied("changing dkimkey key length is not allowed")
+	}
+	if dkNew.Spec.KeyType != dkOld.Spec.KeyType {
+		return admission.Denied("changing dkimkey key type is not allowed")
+	}
+	if dkNew.Spec.SecretName != dkOld.Spec.SecretName {
+		return admission.Denied("changing dkimkey secret name is not allowed")
+	}
+	if dkNew.Spec.Selector != dkOld.Spec.Selector {
+		return admission.Denied("changing dkimkey selector is not allowed")
 	}
 	return admission.Allowed("")
 }
@@ -112,8 +123,20 @@ func (v *dkimKeyV2Validator) handleUpdate(req admission.Request) admission.Respo
 	if dkNew.Name != dkOld.Name {
 		return admission.Denied("changing dkimkey name is not allowed")
 	}
-	if !equality.Semantic.DeepEqual(dkNew.Spec, dkOld.Spec) {
-		return admission.Denied("changing dkimkey spec is not allowed")
+	if dkNew.Spec.Domain != dkOld.Spec.Domain {
+		return admission.Denied("changing dkimkey domain is not allowed")
+	}
+	if dkNew.Spec.KeyLength != dkOld.Spec.KeyLength {
+		return admission.Denied("changing dkimkey key length is not allowed")
+	}
+	if dkNew.Spec.KeyType != dkOld.Spec.KeyType {
+		return admission.Denied("changing dkimkey key type is not allowed")
+	}
+	if dkNew.Spec.SecretName != dkOld.Spec.SecretName {
+		return admission.Denied("changing dkimkey secret name is not allowed")
+	}
+	if dkNew.Spec.Selector != dkOld.Spec.Selector {
+		return admission.Denied("changing dkimkey selector is not allowed")
 	}
 	return admission.Allowed("")
 }

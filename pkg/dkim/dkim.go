@@ -63,6 +63,47 @@ func GenED25519() ([]byte, string, error) {
 	return key, base64.StdEncoding.EncodeToString(pub), nil
 }
 
+// DeriveRSAPublicKey computes the RSA public key from the private key.
+func DeriveRSAPublicKey(priv []byte, size KeyLength) (string, error) {
+	block, _ := pem.Decode(priv)
+	if block == nil || block.Type != "RSA PRIVATE KEY" {
+		return "", fmt.Errorf("failed to decode PEM block containing RSA private key")
+	}
+	privateKey, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+	if err != nil {
+		return "", err
+	}
+	if s := privateKey.N.BitLen(); s != int(size) {
+		return "", fmt.Errorf("key size mismatch: expected %d bits, got %d bits", size, s)
+	}
+	pub, err := x509.MarshalPKIXPublicKey(privateKey.Public().(*rsa.PublicKey))
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(pub), nil
+}
+
+// DeriveED25519PublicKey computes the ed25519 public key from the private key.
+func DeriveED25519PublicKey(priv []byte) (string, error) {
+	block, _ := pem.Decode(priv)
+	if block == nil || block.Type != "PRIVATE KEY" {
+		return "", fmt.Errorf("failed to decode PEM block containing ed25519 private key")
+	}
+	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return "", err
+	}
+	privKey, ok := key.(ed25519.PrivateKey)
+	if !ok {
+		return "", fmt.Errorf("not an ed25519 private key")
+	}
+	pub, err := x509.MarshalPKIXPublicKey(privKey.Public().(ed25519.PublicKey))
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(pub), nil
+}
+
 // GenTXTValue generates the DKIM record for the given public key.
 func GenTXTValue(pub string, keyType KeyType) string {
 	res := []string{}

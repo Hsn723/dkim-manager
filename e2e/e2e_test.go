@@ -82,6 +82,20 @@ var _ = Describe("dkim-manager", func() {
 			}
 			return nil
 		}).Should(Succeed())
+
+		By("checking the DKIMKey status")
+		checkDKIMKeyStatus := func() error {
+			status, err := kubectl(nil, "get", "-n", namespace, "dkimkey", "selector1", "-o", "jsonpath={.status.conditions[?(@.type==\"Ready\")].status}")
+			if err != nil {
+				return err
+			}
+			if string(status) != "True" {
+				return fmt.Errorf("DKIMKey is not ready")
+			}
+			return nil
+		}
+		Eventually(checkDKIMKeyStatus).Should(Succeed())
+		Consistently(checkDKIMKeyStatus).Should(Succeed())
 	})
 
 	It("should delete resources", func() {
