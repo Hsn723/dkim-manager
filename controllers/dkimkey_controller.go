@@ -24,9 +24,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -175,60 +176,86 @@ func (r *DKIMKeyReconciler) reconcile(ctx context.Context, dk *dkimmanagerv2.DKI
 	logger := log.FromContext(ctx)
 	var key []byte
 	var pub string
+	var reason string
 	var err error
+	var targets []string
+	targets, err = r.checkForExistingRecord(ctx, dk)
+	if err != nil {
+		logger.Error(err, "precondition failed")
+		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonInvalid, err.Error())
+		return ctrl.Result{}, r.Status().Update(ctx, dk)
+	}
+	if targets == nil {
+		logger.Info("generating new key pair", "selector", dk.Spec.Selector)
+		key, pub, reason, err = r.generateKeyPair(dk)
+		if err != nil {
+			logger.Error(err, "failed to generate key pair")
+			r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, reason, err.Error())
+			return ctrl.Result{}, r.Status().Update(ctx, dk)
+		}
+		if err := r.reconcileDKIMPrivateKey(ctx, dk, key); err != nil {
+			logger.Error(err, "failed to reconcile Secret")
+			r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonFailed, fmt.Sprintf("Failed to reconcile Secret: %v", err))
+			return ctrl.Result{}, r.Status().Update(ctx, dk)
+		}
+		targets = []string{dkim.GenTXTValue(pub, dk.Spec.KeyType)}
+	}
+	if err := r.reconcileDKIMRecord(ctx, dk, targets); err != nil {
+		logger.Error(err, "failed to reconcile DNSEndpoint")
+		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonFailed, fmt.Sprintf("Failed to reconcile DNSEndpoint: %v", err))
+		return ctrl.Result{}, r.Status().Update(ctx, dk)
+	}
+	logger.Info("done reconciling DKIMKey")
+	r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionTrue, dkimmanagerv2.ReasonSucceeded, "DKIM key created successfully")
+	return ctrl.Result{}, r.Status().Update(ctx, dk)
+}
+
+func (r DKIMKeyReconciler) generateKeyPair(dk *dkimmanagerv2.DKIMKey) (key []byte, pub, reason string, err error) {
 	switch dk.Spec.KeyType {
 	case dkim.KeyTypeRSA:
 		key, pub, err = dkim.GenRSA(dk.Spec.KeyLength)
 	case dkim.KeyTypeED25519:
 		key, pub, err = dkim.GenED25519()
 	default:
-		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonInvalid, "Invalid key type specified")
-		return ctrl.Result{}, r.Status().Update(ctx, dk)
+		reason = dkimmanagerv2.ReasonInvalid
+		err = fmt.Errorf("invalid key type specified")
+		return
 	}
 	if err != nil {
-		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonFailed, fmt.Sprintf("Failed to generate key: %v", err))
-		return ctrl.Result{}, r.Status().Update(ctx, dk)
+		reason = dkimmanagerv2.ReasonFailed
+		err = fmt.Errorf("failed to generate key: %v", err)
+		return
 	}
-	if err := r.checkForExistingResources(ctx, dk); err != nil {
-		logger.Error(err, "precondition failed: resource(s) exist")
-		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonInvalid, err.Error())
-		return ctrl.Result{}, r.Status().Update(ctx, dk)
-	}
-	if err := r.reconcileDKIMRecord(ctx, dk, pub); err != nil {
-		logger.Error(err, "failed to reconcile DNSEndpoint")
-		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonFailed, fmt.Sprintf("Failed to reconcile DNSEndpoint: %v", err))
-		return ctrl.Result{}, r.Status().Update(ctx, dk)
-	}
-	if err := r.reconcileDKIMPrivateKey(ctx, dk, key); err != nil {
-		logger.Error(err, "failed to reconcile Secret")
-		r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonFailed, fmt.Sprintf("Failed to reconcile Secret: %v", err))
-		return ctrl.Result{}, r.Status().Update(ctx, dk)
-	}
-	r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionTrue, dkimmanagerv2.ReasonSucceeded, "DKIM key created successfully")
-	return ctrl.Result{}, r.Status().Update(ctx, dk)
+	return
 }
 
-func (r *DKIMKeyReconciler) checkForExistingResources(ctx context.Context, dk *dkimmanagerv2.DKIMKey) error {
+func (r *DKIMKeyReconciler) checkForExistingRecord(ctx context.Context, dk *dkimmanagerv2.DKIMKey) ([]string, error) {
+	var targets []string
 	de := externaldns.DNSEndpoint()
 	deKey := client.ObjectKey{
 		Namespace: dk.Namespace,
 		Name:      dk.Name,
 	}
-	if err := r.ReadClient.Get(ctx, deKey, de); !apierrors.IsNotFound(err) {
-		return fmt.Errorf("a DKIM record with the same name already exists")
+	err := r.Get(ctx, deKey, de)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return nil, fmt.Errorf("failed to check for existing DNSEndpoint: %v", err)
 	}
-	s := &corev1.Secret{}
-	sKey := client.ObjectKey{
-		Namespace: dk.Namespace,
-		Name:      dk.Spec.SecretName,
+	if apierrors.IsNotFound(err) {
+		return nil, nil
 	}
-	if err := r.ReadClient.Get(ctx, sKey, s); !apierrors.IsNotFound(err) {
-		return fmt.Errorf("a secret key with the same name already exists")
+	endpoints, found, _ := unstructured.NestedSlice(de.UnstructuredContent(), "spec", "endpoints")
+	if found && len(endpoints) != 0 {
+		if ep, ok := endpoints[0].(map[string]interface{}); ok && ep != nil {
+			if ts, ok, _ := unstructured.NestedStringSlice(ep, "targets"); ok {
+				targets = ts
+				return targets, nil
+			}
+		}
 	}
-	return nil
+	return nil, nil
 }
 
-func (r *DKIMKeyReconciler) reconcileDKIMRecord(ctx context.Context, dk *dkimmanagerv2.DKIMKey, pub string) error {
+func (r *DKIMKeyReconciler) reconcileDKIMRecord(ctx context.Context, dk *dkimmanagerv2.DKIMKey, targets []string) error {
 	logger := log.FromContext(ctx)
 	de := externaldns.DNSEndpoint()
 	de.SetName(dk.Name)
@@ -239,7 +266,7 @@ func (r *DKIMKeyReconciler) reconcileDKIMRecord(ctx context.Context, dk *dkimman
 				"dnsName":    fmt.Sprintf("%s._domainkey.%s", dk.Spec.Selector, dk.Spec.Domain),
 				"recordTTL":  dk.Spec.TTL,
 				"recordType": "TXT",
-				"targets":    []string{dkim.GenTXTValue(pub, dk.Spec.KeyType)},
+				"targets":    targets,
 			},
 		},
 	}
@@ -247,7 +274,7 @@ func (r *DKIMKeyReconciler) reconcileDKIMRecord(ctx context.Context, dk *dkimman
 		return err
 	}
 	if err := r.Patch(ctx, de, client.Apply, &client.PatchOptions{
-		Force:        pointer.Bool(true),
+		Force:        ptr.To(true),
 		FieldManager: "dkim-manager",
 	}); err != nil {
 		return err
@@ -262,7 +289,7 @@ func (r *DKIMKeyReconciler) reconcileDKIMPrivateKey(ctx context.Context, dk *dki
 	s := &corev1.Secret{}
 	s.SetName(dk.Spec.SecretName)
 	s.SetNamespace(dk.Namespace)
-	s.Immutable = pointer.Bool(true)
+	s.Immutable = ptr.To(true)
 	s.Data = map[string][]byte{
 		filename: key,
 	}

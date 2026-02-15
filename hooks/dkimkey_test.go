@@ -2,6 +2,7 @@ package hooks
 
 import (
 	"context"
+
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -9,6 +10,7 @@ import (
 
 	dkimmanagerv1 "github.com/hsn723/dkim-manager/api/v1"
 	dkimmanagerv2 "github.com/hsn723/dkim-manager/api/v2"
+	"github.com/hsn723/dkim-manager/pkg/dkim"
 )
 
 var _ = Describe("DKIMKey v1 webhook", func() {
@@ -58,7 +60,7 @@ var _ = Describe("DKIMKey v1 webhook", func() {
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("should deny changing spec", func() {
+	It("should deny changing secretName", func() {
 		name := uuid.NewString()
 		namespace := uuid.NewString()
 		shouldCreateNamespace(ctx, namespace)
@@ -77,6 +79,69 @@ var _ = Describe("DKIMKey v1 webhook", func() {
 
 		err = k8sClient.Update(ctx, dk)
 		Expect(err).To(HaveOccurred())
+	})
+
+	It("should deny changing keyType", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+		shouldCreateV1DKIMKey(ctx, name, namespace, dummyV1DKIMKeySpec(name))
+
+		dk := &dkimmanagerv1.DKIMKey{}
+		key := client.ObjectKey{
+			Namespace: namespace,
+			Name:      name,
+		}
+
+		By("changing spec")
+		err := k8sClient.Get(ctx, key, dk)
+		Expect(err).NotTo(HaveOccurred())
+		dk.Spec.KeyType = dkim.KeyTypeED25519
+
+		err = k8sClient.Update(ctx, dk)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should deny changing keyLength", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+		shouldCreateV1DKIMKey(ctx, name, namespace, dummyV1DKIMKeySpec(name))
+
+		dk := &dkimmanagerv1.DKIMKey{}
+		key := client.ObjectKey{
+			Namespace: namespace,
+			Name:      name,
+		}
+
+		By("changing spec")
+		err := k8sClient.Get(ctx, key, dk)
+		Expect(err).NotTo(HaveOccurred())
+		dk.Spec.KeyLength = dkim.KeyLength1024
+
+		err = k8sClient.Update(ctx, dk)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should allow changing selector", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+		shouldCreateV1DKIMKey(ctx, name, namespace, dummyV1DKIMKeySpec(name))
+
+		dk := &dkimmanagerv1.DKIMKey{}
+		key := client.ObjectKey{
+			Namespace: namespace,
+			Name:      name,
+		}
+
+		By("changing spec")
+		err := k8sClient.Get(ctx, key, dk)
+		Expect(err).NotTo(HaveOccurred())
+		dk.Spec.Selector = "selector2"
+
+		err = k8sClient.Update(ctx, dk)
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
 
@@ -127,7 +192,7 @@ var _ = Describe("DKIMKey v2 webhook", func() {
 		Expect(err).To(HaveOccurred())
 	})
 
-	It("should deny changing spec", func() {
+	It("should deny changing secretName", func() {
 		name := uuid.NewString()
 		namespace := uuid.NewString()
 		shouldCreateNamespace(ctx, namespace)
@@ -146,5 +211,68 @@ var _ = Describe("DKIMKey v2 webhook", func() {
 
 		err = k8sClient.Update(ctx, dk)
 		Expect(err).To(HaveOccurred())
+	})
+
+	It("should deny changing keyType", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+		shouldCreateDKIMKey(ctx, name, namespace, dummyDKIMKeySpec(name))
+
+		dk := &dkimmanagerv2.DKIMKey{}
+		key := client.ObjectKey{
+			Namespace: namespace,
+			Name:      name,
+		}
+
+		By("changing spec")
+		err := k8sClient.Get(ctx, key, dk)
+		Expect(err).NotTo(HaveOccurred())
+		dk.Spec.KeyType = dkim.KeyTypeED25519
+
+		err = k8sClient.Update(ctx, dk)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should deny changing keyLength", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+		shouldCreateDKIMKey(ctx, name, namespace, dummyDKIMKeySpec(name))
+
+		dk := &dkimmanagerv2.DKIMKey{}
+		key := client.ObjectKey{
+			Namespace: namespace,
+			Name:      name,
+		}
+
+		By("changing spec")
+		err := k8sClient.Get(ctx, key, dk)
+		Expect(err).NotTo(HaveOccurred())
+		dk.Spec.KeyLength = dkim.KeyLength1024
+
+		err = k8sClient.Update(ctx, dk)
+		Expect(err).To(HaveOccurred())
+	})
+
+	It("should allow changing selector", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+		shouldCreateDKIMKey(ctx, name, namespace, dummyDKIMKeySpec(name))
+
+		dk := &dkimmanagerv2.DKIMKey{}
+		key := client.ObjectKey{
+			Namespace: namespace,
+			Name:      name,
+		}
+
+		By("changing spec")
+		err := k8sClient.Get(ctx, key, dk)
+		Expect(err).NotTo(HaveOccurred())
+		dk.Spec.Selector = "selector2"
+
+		err = k8sClient.Update(ctx, dk)
+		Expect(err).NotTo(HaveOccurred())
 	})
 })
