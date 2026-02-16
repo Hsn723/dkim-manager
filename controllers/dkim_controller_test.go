@@ -11,6 +11,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/equality"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -130,7 +131,7 @@ var _ = Describe("DKIMKey controller", func() {
 		Expect(dk.IsReady()).To(BeTrue())
 	})
 
-	It("should give up early when DNSEndpoint already exists", func() {
+	It("should allow existing DNSEndpoint with no public keys", func() {
 		name := uuid.NewString()
 		namespace := uuid.NewString()
 		shouldCreateNamespace(ctx, namespace)
@@ -144,7 +145,6 @@ var _ = Describe("DKIMKey controller", func() {
 				{
 					"dnsName":    "dummy",
 					"recordType": "TXT",
-					"targets":    []string{"dummy"},
 				},
 			},
 		}
@@ -167,24 +167,111 @@ var _ = Describe("DKIMKey controller", func() {
 
 		err = k8sClient.Create(ctx, dk)
 		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() error {
+			return getSecret(ctx, name, namespace)
+		}).Should(Succeed())
 		Consistently(func() error {
 			return getSecret(ctx, name, namespace)
-		}).ShouldNot(Succeed())
-		Consistently(func() error {
+		}).Should(Succeed())
+		Eventually(func() error {
 			cde := externaldns.DNSEndpoint()
 			err := k8sClient.Get(ctx, client.ObjectKeyFromObject(de), cde)
 			if err != nil {
 				return err
 			}
-			if !equality.Semantic.DeepEqual(cde.UnstructuredContent()["spec"], de.UnstructuredContent()["spec"]) {
-				return fmt.Errorf("data has been modified. got: %v, expected %v", cde.UnstructuredContent()["spec"], de.UnstructuredContent()["spec"])
+			endpoints, ok, err := unstructured.NestedSlice(cde.UnstructuredContent(), "spec", "endpoints")
+			if err != nil || !ok || len(endpoints) == 0 {
+				return fmt.Errorf("invalid endpoints: %v", err)
+			}
+			targets, ok := endpoints[0].(map[string]interface{})["targets"].([]interface{})
+			if !ok {
+				return fmt.Errorf("invalid targets")
+			}
+			if _, ok := targets[0].(string); !ok {
+				return fmt.Errorf("invalid target value")
 			}
 			return nil
 		}).Should(Succeed())
 
 		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(dk.IsReady()).To(BeFalse())
+		Expect(dk.IsReady()).To(BeTrue())
+	})
+
+	It("should allow changing DKIMKey spec when DNSEndpoint already exists with the same public key", func() {
+		name := uuid.NewString()
+		namespace := uuid.NewString()
+		shouldCreateNamespace(ctx, namespace)
+
+		By("creating DKIMKey")
+		dk := &dkimmanagerv2.DKIMKey{}
+		dk.SetName(name)
+		dk.SetNamespace(namespace)
+		dk.Spec = dkimmanagerv2.DKIMKeySpec{
+			SecretName: name,
+			Selector:   "selector1",
+			Domain:     "atelierhsn.com",
+			TTL:        3600,
+			KeyLength:  dkim.KeyLength2048,
+			KeyType:    dkim.KeyTypeRSA,
+		}
+
+		err := k8sClient.Create(ctx, dk)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func() error {
+			return getSecret(ctx, name, namespace)
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			return getDNSEndpoint(ctx, name, namespace)
+		}).Should(Succeed())
+
+		Eventually(func() error {
+			err := k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), dk)
+			if err != nil {
+				return err
+			}
+			if !dk.IsReady() {
+				return fmt.Errorf("DKIMKey is not ready")
+			}
+			return nil
+		}).Should(Succeed())
+
+		newTTL := uint(1800)
+		dk.Spec.TTL = newTTL
+		err = k8sClient.Update(ctx, dk)
+		Expect(err).NotTo(HaveOccurred())
+
+		Eventually(func() error {
+			de := externaldns.DNSEndpoint()
+			err := k8sClient.Get(ctx, client.ObjectKey{
+				Name:      name,
+				Namespace: namespace,
+			}, de)
+			if err != nil {
+				return err
+			}
+			endpoints, ok, err := unstructured.NestedSlice(de.UnstructuredContent(), "spec", "endpoints")
+			if err != nil || !ok || len(endpoints) == 0 {
+				return fmt.Errorf("invalid endpoints: %v", err)
+			}
+			endpoint, ok := endpoints[0].(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("endpoint not found")
+			}
+			ttl, ok := endpoint["recordTTL"].(int64)
+			if !ok {
+				return fmt.Errorf("invalid ttl type: %T", endpoint["recordTTL"])
+			}
+			if uint(ttl) != newTTL {
+				return fmt.Errorf("unexpected ttl: got %d, want %d", ttl, newTTL)
+			}
+			return nil
+		}).Should(Succeed())
+
+		Eventually(k8sClient.Get).WithArguments(ctx, client.ObjectKeyFromObject(dk), dk).Should(Succeed())
+		Expect(dk.IsReady()).To(BeTrue())
 	})
 
 	It("should give up early when Secret already exists", func() {
@@ -570,16 +657,30 @@ var _ = Describe("DKIMKey v1/v2 conversion", func() {
 		}).Should(Succeed())
 
 		By("reading back via v1 and checking status")
-		v1Key := &dkimmanagerv1.DKIMKey{}
-		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), v1Key)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(v1Key.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusOK))
+		Eventually(func() error {
+			v1Key := &dkimmanagerv1.DKIMKey{}
+			err := k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), v1Key)
+			if err != nil {
+				return err
+			}
+			if v1Key.Status != dkimmanagerv1.DKIMKeyStatusOK {
+				return fmt.Errorf("unexpected status: got %s, want %s", v1Key.Status, dkimmanagerv1.DKIMKeyStatusOK)
+			}
+			return nil
+		}).Should(Succeed())
 
 		By("reading back via v2 and checking status")
-		v2Key := &dkimmanagerv2.DKIMKey{}
-		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), v2Key)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(v2Key.IsReady()).To(BeTrue())
+		Eventually(func() error {
+			v2Key := &dkimmanagerv2.DKIMKey{}
+			err := k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), v2Key)
+			if err != nil {
+				return err
+			}
+			if !v2Key.IsReady() {
+				return fmt.Errorf("DKIMKey is not ready")
+			}
+			return nil
+		}).Should(Succeed())
 	})
 
 	It("should show correct v1 status for a DKIMKey created via v2 API", func() {
@@ -608,9 +709,16 @@ var _ = Describe("DKIMKey v1/v2 conversion", func() {
 		}).Should(Succeed())
 
 		By("reading back via v1 and checking status")
-		v1Key := &dkimmanagerv1.DKIMKey{}
-		err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), v1Key)
-		Expect(err).NotTo(HaveOccurred())
-		Expect(v1Key.Status).To(Equal(dkimmanagerv1.DKIMKeyStatusOK))
+		Eventually(func() error {
+			v1Key := &dkimmanagerv1.DKIMKey{}
+			err = k8sClient.Get(ctx, client.ObjectKeyFromObject(dk), v1Key)
+			if err != nil {
+				return err
+			}
+			if v1Key.Status != dkimmanagerv1.DKIMKeyStatusOK {
+				return fmt.Errorf("unexpected status: got %s, want %s", v1Key.Status, dkimmanagerv1.DKIMKeyStatusOK)
+			}
+			return nil
+		}).Should(Succeed())
 	})
 })
