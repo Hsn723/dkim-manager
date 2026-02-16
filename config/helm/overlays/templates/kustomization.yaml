@@ -5,8 +5,11 @@ namespace: '{{ .Release.Namespace }}'
 
 namePrefix: '{{ template "project.fullname" . }}-'
 
-commonLabels:
-  app.kubernetes.io/name: '{{ include "project.name" . }}'
+labels:
+  - includeSelectors: true
+    includeTemplates: true
+    pairs:
+      app.kubernetes.io/name: '{{ include "project.name" . }}'
 
 patches:
   - path: webhookcainjection_patch.yaml

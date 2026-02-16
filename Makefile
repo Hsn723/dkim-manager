@@ -2,9 +2,9 @@
 # Image URL to use all building/pushing image targets
 IMG ?= ghcr.io/hsn723/dkim-manager:latest
 
-EXTERNAL_DNS_VERSION = 0.13.4
-HELM_VERSION = 3.12.0
-KUSTOMIZE_VERSION = 5.0.3
+EXTERNAL_DNS_VERSION = 0.20.0
+HELM_VERSION = 4.1.1
+KUSTOMIZE_VERSION = 5.8.1
 
 BINDIR = $(shell pwd)/bin
 YQ = $(BINDIR)/yq
@@ -75,7 +75,7 @@ lint:
 
 crds:
 	mkdir -p config/crd/third-party
-	curl -o config/crd/third-party/dnsendpoint.yaml -sLf https://raw.githubusercontent.com/kubernetes-sigs/external-dns/v$(EXTERNAL_DNS_VERSION)/docs/contributing/crd-source/crd-manifest.yaml
+	curl -o config/crd/third-party/dnsendpoint.yaml -sLf https://raw.githubusercontent.com/kubernetes-sigs/external-dns/v$(EXTERNAL_DNS_VERSION)/config/crd/standard/dnsendpoints.externaldns.k8s.io.yaml
 
 .PHONY: test
 test: manifests generate fmt vet crds setup-envtest ## Run tests.
