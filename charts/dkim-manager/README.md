@@ -15,7 +15,7 @@ curl -sLf https://github.com/jetstack/cert-manager/releases/latest/download/cert
 
 ### Install external-dns CRD
 ```sh
-curl -sLf https://raw.githubusercontent.com/kubernetes-sigs/external-dns/v0.10.2/docs/contributing/crd-source/crd-manifest.yaml | kubectl apply -f -
+helm show crds external-dns/external-dns --version "$(yq .dependencies[0].version Chart.yaml)" | kubectl apply -f -
 ```
 
 ### Install the Chart
