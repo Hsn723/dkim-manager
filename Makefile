@@ -2,7 +2,6 @@
 # Image URL to use all building/pushing image targets
 IMG ?= ghcr.io/hsn723/dkim-manager:latest
 
-EXTERNAL_DNS_VERSION = 0.20.0
 HELM_VERSION = 4.1.1
 KUSTOMIZE_VERSION = 5.8.1
 
@@ -73,9 +72,13 @@ lint:
 	pre-commit install
 	pre-commit run --all-files
 
-crds:
+crds: helm $(YQ)
 	mkdir -p config/crd/third-party
-	curl -o config/crd/third-party/dnsendpoint.yaml -sLf https://raw.githubusercontent.com/kubernetes-sigs/external-dns/v$(EXTERNAL_DNS_VERSION)/config/crd/standard/dnsendpoints.externaldns.k8s.io.yaml
+	@if ! $(HELM) repo list | grep -q "external-dns"; then \
+		$(HELM) repo add external-dns https://kubernetes-sigs.github.io/external-dns/ ;\
+	fi
+	$(HELM) repo update
+	$(HELM) show crds external-dns/external-dns --version "$$($(YQ) .dependencies[0].version charts/dkim-manager/Chart.yaml)" > config/crd/third-party/dnsendpoint.yaml
 
 .PHONY: test
 test: manifests generate fmt vet crds setup-envtest ## Run tests.
