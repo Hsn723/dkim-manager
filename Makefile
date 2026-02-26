@@ -48,11 +48,17 @@ manifests: kustomize controller-gen ## Generate WebhookConfiguration, ClusterRol
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	$(KUSTOMIZE) build config/helm/overlays/crds > charts/dkim-manager/templates/generated/crds/dkim-manager.atelierhsn.com_dkimkeys.yaml
 	$(KUSTOMIZE) build config/helm/overlays/templates > charts/dkim-manager/templates/generated/generated.yaml
-	sed -i "s/\(appVersion: \)[0-9]\+\.[0-9]\+\.[0-9]\+/\1$$(cat VERSION)/" charts/dkim-manager/Chart.yaml
 
 .PHONY: update-external-dns
 update-external-dns: helm
 	$(HELM) dependency update charts/dkim-manager
+
+.PHONY: update-chart
+update-chart: update-external-dns manifests $(YQ)
+	APP_VERSION=$$(cat VERSION) $(YQ) e -i '.appVersion = strenv(APP_VERSION)' charts/dkim-manager/Chart.yaml
+	if [ "$$(git diff --name-only charts/dkim-manager/Chart.yaml)" != "" ]; then \
+		$(YQ) e -i '.version |= (split(".") | .[-1] |= ((. tag = "!!int") + 1) | join("."))' charts/dkim-manager/Chart.yaml ; \
+	fi
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
