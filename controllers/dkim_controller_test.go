@@ -482,7 +482,7 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 			Client:     mgr.GetClient(),
 			Scheme:     mgr.GetScheme(),
 			Log:        ctrl.Log.WithName("controllers").WithName("DKIMKey"),
-			Namespace:  observedNamespace,
+			Namespaces: []string{observedNamespace},
 			ReadClient: mgr.GetAPIReader(),
 		}
 		err = reconciler.SetupWithManager(mgr)

@@ -37,7 +37,7 @@ See [UPGRADING.md](UPGRADING.md) for upgrade instructions, especially when upgra
 - --txtPrefix= #some non-empty string
 ```
 
-Additionally, it is recommended to set `--domainFilter` to restrict the scope of operation of `external-dns` to the domain for which you want to create DKIM keys, and to set `--namespace=YOUR_NAMESPACE` so that `external-dns` only looks at resources inside your namespace. Doing so allows you to use `external-dns` for the sole purpose of registering DKIM TXT records.
+Additionally, it is recommended to set `--domainFilter` to restrict the scope of operation of `external-dns` to the domain for which you want to create DKIM keys, and to set `--namespaces=YOUR_NAMESPACE` so that `external-dns` only looks at resources inside your namespace. Doing so allows you to use `external-dns` for the sole purpose of registering DKIM TXT records.
 
 ## Usage
 DKIM keys can be requested by creating a `DKIMKey` resource.
