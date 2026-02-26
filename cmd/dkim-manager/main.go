@@ -25,6 +25,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -94,23 +95,26 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var serviceAccount string
+	var namespaces []string
 	var namespace string
 	var namespaced bool
 	var webhooksEnabled bool
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
+	pflag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	pflag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	pflag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&serviceAccount, "service-account", getServiceAccount(), "The name of the service account.")
-	flag.StringVar(&namespace, "namespace", "", "The namespace the controller should manage.")
-	flag.BoolVar(&namespaced, "namespaced", false, "Only manage resources in the same namespace as the controller. The --namespace parameter, if defined, takes precedence.")
-	flag.BoolVar(&webhooksEnabled, "webhooks", true, "Enable webhooks")
+	pflag.StringVar(&serviceAccount, "service-account", getServiceAccount(), "The name of the service account.")
+	pflag.StringVar(&namespace, "namespace", "", "The namespace the controller should manage. Deprecated in favor of --namespaces and only present for compatiblity purposes.")
+	pflag.StringSliceVar(&namespaces, "namespaces", nil, "The namespaces the controller should manage.")
+	pflag.BoolVar(&namespaced, "namespaced", false, "Only manage resources in the same namespace as the controller. The --namespaces parameter, if defined, takes precedence.")
+	pflag.BoolVar(&webhooksEnabled, "webhooks", true, "Enable webhooks")
 	opts := zap.Options{
 		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
-	flag.Parse()
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
@@ -136,15 +140,18 @@ func main() {
 
 	dec := admission.NewDecoder(scheme)
 
-	if namespace == "" && namespaced {
-		namespace = getNamespace()
+	if len(namespaces) == 0 && namespace == "" && namespaced {
+		namespaces = []string{getNamespace()}
+	}
+	if namespace != "" {
+		namespaces = append(namespaces, namespace)
 	}
 
 	if err := (&controllers.DKIMKeyReconciler{
 		Client:     mgr.GetClient(),
 		Log:        ctrl.Log.WithName("controllers").WithName("DKIMKey"),
 		Scheme:     mgr.GetScheme(),
-		Namespace:  namespace,
+		Namespaces: namespaces,
 		ReadClient: mgr.GetAPIReader(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "DKIMKey")

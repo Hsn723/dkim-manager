@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -48,9 +49,9 @@ const (
 // DKIMKeyReconciler reconciles a DKIMKey object.
 type DKIMKeyReconciler struct {
 	client.Client
-	Log       logr.Logger
-	Scheme    *runtime.Scheme
-	Namespace string
+	Log        logr.Logger
+	Scheme     *runtime.Scheme
+	Namespaces []string
 	// workaround for https://github.com/kubernetes-sigs/controller-runtime/issues/550
 	ReadClient client.Reader
 }
@@ -74,7 +75,7 @@ func (r *DKIMKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if r.Namespace != "" && dk.Namespace != r.Namespace {
+	if len(r.Namespaces) > 0 && !slices.Contains(r.Namespaces, dk.Namespace) {
 		if r.hasCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonInvalid) {
 			return ctrl.Result{}, nil
 		}

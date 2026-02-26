@@ -26,6 +26,9 @@ controller:
   extraArgs: ["--leader-elect"]
 
 namespaced: false
+namespaces: []
+
+# legacy
 namespace: ""
 
 external-dns:

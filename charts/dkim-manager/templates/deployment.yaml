@@ -28,8 +28,13 @@ spec:
             {{- range .Values.controller.extraArgs }}
             - {{ . }}
             {{- end }}
+            {{- if or .Values.namespace .Values.namespaces }}
             {{- if .Values.namespace }}
-            - --namespace={{ .Values.namespace }}
+            - --namespaces={{ .Values.namespace }}
+            {{- end }}
+            {{- range .Values.namespaces }}
+            - --namespaces={{ . }}
+            {{- end }}
             {{- else if .Values.namespaced }}
             - --namespaced
             {{- end }}
