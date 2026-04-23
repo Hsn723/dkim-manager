@@ -9,7 +9,7 @@ permissions:
   contents: write
 jobs:
   release:
-    uses: hsn723/actions/.github/workflows/helm-release.yml@v1
+    uses: hsn723/actions/.github/workflows/helm-release.yml@v1.0.9
     secrets: inherit
     with:
       extra_helm_setup: |
