@@ -10,6 +10,8 @@ on:
       - master
 env:
   go-version: stable
+  GH_TELEMETRY: false
+  DO_NOT_TRACK: true
 permissions:
   contents: read
 jobs:
