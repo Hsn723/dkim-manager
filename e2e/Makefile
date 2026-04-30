@@ -62,11 +62,5 @@ $(KUBECTL):
 
 .PHONY: get-k8s-versions
 get-k8s-versions:
-	@KIND_TAGS=$$(gh api /repos/kubernetes-sigs/kind/releases/latest | jq -r '.body' | grep -Po '(?<=- v)(?:\d+\.\d+\.\d+: `kindest\/node:v)\K(\d+\.\d+\.\d+@sha256:[a-f0-9]+)') && \
-	LATEST_VERSION_MAJOR=$$(echo $(KUBERNETES_VERSION) | grep -Po '(?<=v)\d+\.\d+') && \
-	LATEST_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${LATEST_VERSION_MAJOR}" | sort -u | tail -n 1) && \
-	PREVIOUS_VERSION_MAJOR=$$(echo $${LATEST_VERSION_MAJOR} | awk -F. -v OFS=. '{$$NF -= 1; print}') && \
-	PREVIOUS_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${PREVIOUS_VERSION_MAJOR}" | sort -u | tail -n 1) && \
-	PREVIOUS2_VERSION_MAJOR=$$(echo $${PREVIOUS_VERSION_MAJOR} | awk -F. -v OFS=. '{$$NF -= 1; print}') && \
-	PREVIOUS2_KIND_TAG=$$(printf "%s\n" $${KIND_TAGS} | grep "$${PREVIOUS2_VERSION_MAJOR}" | sort -u | tail -n 1) && \
-	echo "['$${PREVIOUS2_KIND_TAG}', '$${PREVIOUS_KIND_TAG}', '$${LATEST_KIND_TAG}']"
+	@KIND_TAGS=$$(gh api /repos/kubernetes-sigs/kind/releases/latest | jq -r '.body' | grep -Po '(?<=- v)(?:\d+\.\d+\.\d+: `kindest\/node:v)\K(\d+\.\d+\.\d+@sha256:[a-f0-9]+)' | sort -r | head -3) && \
+	printf "[%s]" "$$(printf "'%s', " $${KIND_TAGS} | sed 's/, $$//')"
