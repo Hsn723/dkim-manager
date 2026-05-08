@@ -2,10 +2,9 @@
 
 ## Quick start
 
-### Add the Helm Repository
+### Pull the helm chart
 ```sh
-helm repo add dkim-manager https://hsn723.github.io/dkim-manager
-helm repo update
+helm pull oci://ghcr.io/hsn723/charts/dkim-manager --version ${VERSION}
 ```
 
 ### Install cert-manager
@@ -23,13 +22,13 @@ helm show crds external-dns/external-dns --version "$(yq .dependencies[0].versio
 Installing the chart with default settings (standalone):
 
 ```sh
-helm install --create-namespace --namespace dkim-manager dkim-manager dkim-manager/dkim-manager
+helm install --create-namespace --namespace dkim-manager dkim-manager oci://ghcr.io/hsn723/charts/dkim-manager --version ${VERSION}
 ```
 
 Specify parameters using `--set key=value[,key=value]` arguments to `helm install`, or provide your own `values.yaml`:
 
 ```sh
-helm install --create-namespace --namespace dkim-manager dkim-manager -f values.yaml dkim-manager/dkim-manager
+helm install --create-namespace --namespace dkim-manager dkim-manager -f values.yaml oci://ghcr.io/hsn723/charts/dkim-manager --version ${VERSION}
 ```
 
 ## Values
@@ -51,5 +50,5 @@ The `external-dns` helm chart is included for convenience. If you use it, you mu
 
 ## Generate Manifests
 ```sh
-helm template --namespace dkim-manager dkim-manager [-f values.yaml] dkim-manager/dkim-manager
+helm template --namespace dkim-manager dkim-manager [-f values.yaml] oci://ghcr.io/hsn723/charts/dkim-manager --version ${VERSION}
 ```
