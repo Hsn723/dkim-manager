@@ -62,5 +62,5 @@ $(KUBECTL):
 
 .PHONY: get-k8s-versions
 get-k8s-versions:
-	@KIND_TAGS=$$(gh api /repos/kubernetes-sigs/kind/releases/latest | jq -r '.body' | grep -Po '(?<=- v)(?:\d+\.\d+\.\d+: `kindest\/node:v)\K(\d+\.\d+\.\d+@sha256:[a-f0-9]+)' | sort -r | head -3) && \
+	@KIND_TAGS=$$(gh api /repos/kubernetes-sigs/kind/releases/latest --jq '.body' | grep -Po '(?:v\d+\.\d+\.\d+: `kindest\/node:v)\K(\d+\.\d+\.\d+@sha256:[a-f0-9]+)' | sort -r | head -3) && \
 	printf "[%s]" "$$(printf "'%s', " $${KIND_TAGS} | sed 's/, $$//')"
