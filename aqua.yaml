@@ -1,0 +1,21 @@
+---
+# yaml-language-server: $schema=https://raw.githubusercontent.com/aquaproj/aqua/main/json-schema/aqua-yaml.json
+# aqua - Declarative CLI Version Manager
+# https://aquaproj.github.io/
+checksum:
+  enabled: true
+  require_checksum: true
+  supported_envs:
+  - all
+registries:
+- type: standard
+  ref: v4.523.0 # renovate: depName=aquaproj/aqua-registry
+packages:
+- name: helm/helm@v4.2.0
+- name: kubernetes-sigs/kustomize@kustomize/v5.8.1
+- name: mikefarah/yq@v4.53.3
+- name: pre-commit/pre-commit@v4.6.0
+- name: kubernetes-sigs/controller-runtime/setup-envtest@v0.24.1
+- name: kubernetes-sigs/controller-tools/controller-gen@v0.21.0
+- name: GoogleContainerTools/container-structure-test@v1.22.1
+- name: kubernetes-sigs/kind@v0.32.0

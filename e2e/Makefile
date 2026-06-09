@@ -1,11 +1,11 @@
+include ../Makefile.common
+
 PROJECT_NAME = dkim-manager
-CERT_MANAGER_VERSION = 1.6.1
+CERT_MANAGER_VERSION = 1.20.2
 KUBERNETES_VERSION = $(shell curl --retry 3 --retry-all-errors -L -s https://dl.k8s.io/release/stable.txt)
 KIND_NODE_TAG = ""
 
 BINDIR = $(dir $(shell pwd))/bin/
-HELM = $(BINDIR)/helm
-KIND = $(BINDIR)/kind
 KUBECTL = $(BINDIR)/kubectl
 KIND_CONFIG = kind-config.yaml
 KUBECONFIG = $(shell pwd)/.kubeconfig
@@ -13,24 +13,24 @@ export KUBECTL KUBECONFIG
 
 .PHONY: start-kind
 start-kind:
-	$(KIND) create cluster --name=$(PROJECT_NAME) --config=$(KIND_CONFIG) --image=kindest/node:v$(KIND_NODE_TAG) --wait 1m
+	kind create cluster --name=$(PROJECT_NAME) --config=$(KIND_CONFIG) --image=kindest/node:v$(KIND_NODE_TAG) --wait 1m
 
 .PHONY: deploy
 deploy:
 	cd ..; CGO_ENABLED=0 go build -o dkim-manager -ldflags="-w -s" cmd/dkim-manager/main.go
 	cd ..; docker build --no-cache -t $(PROJECT_NAME):dev .
-	$(KIND) load docker-image $(PROJECT_NAME):dev --name=$(PROJECT_NAME)
+	kind load docker-image $(PROJECT_NAME):dev --name=$(PROJECT_NAME)
 
 .PHONY: bootstrap
-bootstrap:
+bootstrap: init-aqua
 	$(KUBECTL) apply -f https://github.com/jetstack/cert-manager/releases/download/v$(CERT_MANAGER_VERSION)/cert-manager.yaml
 	$(KUBECTL) -n cert-manager wait --for=condition=available --timeout=180s --all deployments
-	$(HELM) install --create-namespace --namespace $(PROJECT_NAME) $(PROJECT_NAME) ../charts/$(PROJECT_NAME) -f values.yaml
+	helm install --create-namespace --namespace $(PROJECT_NAME) $(PROJECT_NAME) ../charts/$(PROJECT_NAME) -f values.yaml
 	$(KUBECTL) -n $(PROJECT_NAME) wait --for=condition=available --timeout=180s --all deployments
 	$(KUBECTL) apply -f ../config/crd/third-party/dnsendpoint.yaml
 
 .PHONY: start
-start: $(HELM) $(KIND) $(KUBECTL) crds start-kind deploy bootstrap
+start: init-aqua $(KUBECTL) crds start-kind deploy bootstrap
 
 .PHONY: test
 test:
@@ -38,8 +38,8 @@ test:
 		go test -v -race . -ginkgo.v -ginkgo.fail-fast
 
 .PHONY: stop
-stop: $(KIND)
-	$(KIND) delete cluster --name=$(PROJECT_NAME)
+stop:
+	kind delete cluster --name=$(PROJECT_NAME)
 	-docker image rm $(PROJECT_NAME):dev
 	-docker image prune -f
 
@@ -49,11 +49,6 @@ crds:
 
 $(HELM):
 	$(MAKE) -C .. helm
-
-$(KIND):
-	mkdir -p ../bin
-	curl -sfL -o $@ https://github.com/kubernetes-sigs/kind/releases/latest/download/kind-linux-amd64
-	chmod a+x $@
 
 $(KUBECTL):
 	mkdir -p ../bin
