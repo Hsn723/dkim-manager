@@ -1,0 +1,13 @@
+AQUA_VERSION = 2.59.1
+
+PATH := ${HOME}/.local/share/aquaproj-aqua/bin:${BINDIR}:$(PATH)
+
+.PHONY: init-aqua
+init-aqua:
+	@go install github.com/aquaproj/aqua/v2/cmd/aqua@v$(AQUA_VERSION)
+	@aqua i -l
+
+.PHONY: update-aqua
+update-aqua:
+	aqua update
+	aqua update-checksum
