@@ -1,0 +1,76 @@
+name: test
+on:
+  push:
+    branches:
+    - master
+    tags-ignore:
+    - '*'
+  pull_request:
+    branches:
+    - master
+env:
+  go-version: stable
+  GH_TELEMETRY: false
+  DO_NOT_TRACK: true
+permissions:
+  contents: read
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Test
+        run: make build
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Test
+        run: make test
+  get-k8s-versions:
+    runs-on: ubuntu-latest
+    outputs:
+      k8s-versions: ${{ steps.get-k8s-version.outputs.versions }}
+    permissions:
+      contents: read
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - id: get-k8s-version
+      working-directory: e2e
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        echo "versions=$(make get-k8s-versions)" >> $GITHUB_OUTPUT
+  e2e:
+    name: End-to-End Tests
+    needs: get-k8s-versions
+    strategy:
+      matrix:
+        k8s-version: ${{ fromJson(needs.get-k8s-versions.outputs.k8s-versions) }}
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      with:
+        go-version: ${{ env.go-version }}
+    - run: make start KIND_NODE_TAG=${{ matrix.k8s-version }}
+      working-directory: e2e
+    - run: make test
+      working-directory: e2e
+  all-e2e-pass:
+    name: All e2e test pass
+    if: always()
+    needs: e2e
+    runs-on: ubuntu-latest
+    steps:
+    - run: exit 0
