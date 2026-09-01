@@ -35,6 +35,8 @@ updates:
       interval: "daily"
     cooldown:
       default-days: 3
+      exclude:
+        - "hsn723/actions/*"
   - package-ecosystem: "pre-commit"
     directory: "/"
     schedule:
