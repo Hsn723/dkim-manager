@@ -12,43 +12,30 @@ builds:
     goarch:
       - amd64
       - arm64
-dockers:
-  - image_templates:
-    - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-amd64"
-    use: buildx
-    dockerfile: Dockerfile
+dockers_v2:
+  - ids:
+      - dkim-manager
+    images:
+      - "ghcr.io/hsn723/{{.ProjectName}}"
+    tags:
+      - "{{.Version}}"
+      - "{{.Major}}.{{.Minor}}"
     extra_files:
       - LICENSE
-    build_flag_templates:
-      - "--platform=linux/amd64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-  - image_templates:
-    - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-arm64"
-    use: buildx
-    goarch: arm64
-    dockerfile: Dockerfile
-    extra_files:
-      - LICENSE
-    build_flag_templates:
-      - "--platform=linux/arm64"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-docker_manifests:
-  - name_template: "ghcr.io/hsn723/{{.ProjectName}}:latest"
-    image_templates:
-      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-amd64"
-      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-arm64"
-  - name_template: "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}"
-    image_templates:
-      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-amd64"
-      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-arm64"
-  - name_template: "ghcr.io/hsn723/{{.ProjectName}}:{{ .Major }}.{{ .Minor }}"
-    image_templates:
-      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-amd64"
-      - "ghcr.io/hsn723/{{.ProjectName}}:{{ .Version }}-arm64"
+    annotations:
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+      "org.opencontainers.image.base.name": "{{ .BaseImage }}"
+      "org.opencontainers.image.base.digest": "{{ .BaseImageDigest }}"
+    labels:
+      "org.opencontainers.image.created": "{{ .Date }}"
+      "org.opencontainers.image.revision": "{{ .FullCommit }}"
+      "org.opencontainers.image.version": "{{ .Version }}"
+    platforms:
+      - "linux/amd64"
+      - "linux/arm64"
+    sbom: true
 checksum:
   name_template: 'checksums.txt'
 snapshot:
@@ -83,6 +70,6 @@ docker_signs:
     args:
       - 'sign'
       - '--yes'
-      - '${artifact}'
+      - '${artifact}@${digest}'
 docker_digest:
   name_template: 'digests.txt'

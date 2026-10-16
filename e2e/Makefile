@@ -17,7 +17,7 @@ start-kind:
 
 .PHONY: deploy
 deploy:
-	cd ..; CGO_ENABLED=0 go build -o dkim-manager -ldflags="-w -s" cmd/dkim-manager/main.go
+	cd ..; mkdir -p linux/amd64; CGO_ENABLED=0 go build -o linux/amd64/dkim-manager -ldflags="-w -s" cmd/dkim-manager/main.go
 	cd ..; docker build --no-cache -t $(PROJECT_NAME):dev .
 	kind load docker-image $(PROJECT_NAME):dev --name=$(PROJECT_NAME)
 
