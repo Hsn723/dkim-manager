@@ -8,30 +8,6 @@ permissions:
   contents: read
 jobs:
   lint-test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
-      - name: Set up chart-testing
-        uses: helm/chart-testing-action@6ec842c01de15ebb84c8627d2744a0c2f2755c9f # v2.8.0
-      - name: Run chart-testing (list-changed)
-        id: list-changed
-        run: |
-          changed=$(ct list-changed --config ct.yaml)
-          if [[ -n "$changed" ]]; then
-            echo "changed=true" >> $GITHUB_OUTPUT
-          fi
-      - name: Run chart-testing (lint)
-        run: ct lint --config ct.yaml
-      - name: Create kind cluster
-        uses: helm/kind-action@1544676c07bb3570fcb70166beaa07c4528fd4aa # v1.15.1
-        if: steps.list-changed.outputs.changed == 'true'
-      - name: Apply cert-manager
-        run: |
-          kubectl apply -f https://github.com/jetstack/cert-manager/releases/latest/download/cert-manager.yaml
-          kubectl -n cert-manager wait --for=condition=available --timeout=180s --all deployments
-      - name: Run chart-testing (install)
-        run: ct install --config ct.yaml
+    uses: hsn723/actions/.github/workflows/helm-lint.yml@3a9e9ad4bbf7fa37f2b1ac810d5d0c9cd06ebc63 # v1.0.48
+    with:
+      apply_cert_manager: true
