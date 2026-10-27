@@ -26,3 +26,4 @@ testbin/*
 config/crd/third-party
 /dkim-manager
 dist/
+linux/*
