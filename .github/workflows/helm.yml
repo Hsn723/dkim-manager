@@ -8,6 +8,6 @@ permissions:
   contents: read
 jobs:
   lint-test:
-    uses: hsn723/actions/.github/workflows/helm-lint.yml@bd05ba2349bb5069aa84e061397f491ef75ffe4e # v1.0.49
+    uses: hsn723/actions/.github/workflows/helm-lint.yml@0ff0251ffdcdeeb72d81fcf7b23fe85ad700aa81 # v1.0.51
     with:
       apply_cert_manager: true
