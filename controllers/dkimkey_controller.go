@@ -84,7 +84,7 @@ func (r *DKIMKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, r.Status().Update(ctx, dk)
 	}
 
-	if dk.ObjectMeta.DeletionTimestamp.IsZero() {
+	if dk.DeletionTimestamp.IsZero() {
 		if !controllerutil.ContainsFinalizer(dk, finalizerName) {
 			controllerutil.AddFinalizer(dk, finalizerName)
 			return ctrl.Result{}, r.Update(ctx, dk)
@@ -218,6 +218,8 @@ func (r DKIMKeyReconciler) generateKeyPair(dk *dkimmanagerv2.DKIMKey) (key []byt
 		key, pub, err = dkim.GenRSA(dk.Spec.KeyLength)
 	case dkim.KeyTypeED25519:
 		key, pub, err = dkim.GenED25519()
+	case dkim.KeyTypeMLDSA44:
+		key, pub, err = dkim.GenMLDSA44()
 	default:
 		reason = dkimmanagerv2.ReasonInvalid
 		err = fmt.Errorf("invalid key type specified")
@@ -257,6 +259,8 @@ func (r *DKIMKeyReconciler) checkForExistingKey(ctx context.Context, dk *dkimman
 		pub, err = dkim.DeriveRSAPublicKey(priv, dk.Spec.KeyLength)
 	case dkim.KeyTypeED25519:
 		pub, err = dkim.DeriveED25519PublicKey(priv)
+	case dkim.KeyTypeMLDSA44:
+		pub, err = dkim.DeriveMLDSA44PublicKey(priv)
 	default:
 		return nil, fmt.Errorf("invalid key type specified")
 	}
