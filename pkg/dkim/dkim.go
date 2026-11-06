@@ -2,6 +2,7 @@ package dkim
 
 import (
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -21,6 +22,9 @@ const (
 
 	KeyTypeRSA     KeyType = "rsa"
 	KeyTypeED25519 KeyType = "ed25519"
+	KeyTypeMLDSA44 KeyType = "mldsa44"
+
+	PrivateKeyPEMType = "PRIVATE KEY"
 )
 
 // GenRSA generates an RSA key pair.
@@ -53,10 +57,31 @@ func GenED25519() ([]byte, string, error) {
 		return nil, "", err
 	}
 	key := pem.EncodeToMemory(&pem.Block{
-		Type:  "PRIVATE KEY",
+		Type:  PrivateKeyPEMType,
 		Bytes: bytes,
 	})
 	pub, err := x509.MarshalPKIXPublicKey(pubKey)
+	if err != nil {
+		return nil, "", err
+	}
+	return key, base64.StdEncoding.EncodeToString(pub), nil
+}
+
+// GenMLDSA44 generates an MLDSA-44 key pair.
+func GenMLDSA44() ([]byte, string, error) {
+	privKey, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	if err != nil {
+		return nil, "", err
+	}
+	bytes, err := x509.MarshalPKCS8PrivateKey(privKey)
+	if err != nil {
+		return nil, "", err
+	}
+	key := pem.EncodeToMemory(&pem.Block{
+		Type:  PrivateKeyPEMType,
+		Bytes: bytes,
+	})
+	pub, err := x509.MarshalPKIXPublicKey(privKey.PublicKey())
 	if err != nil {
 		return nil, "", err
 	}
@@ -86,7 +111,7 @@ func DeriveRSAPublicKey(priv []byte, size KeyLength) (string, error) {
 // DeriveED25519PublicKey computes the ed25519 public key from the private key.
 func DeriveED25519PublicKey(priv []byte) (string, error) {
 	block, _ := pem.Decode(priv)
-	if block == nil || block.Type != "PRIVATE KEY" {
+	if block == nil || block.Type != PrivateKeyPEMType {
 		return "", fmt.Errorf("failed to decode PEM block containing ed25519 private key")
 	}
 	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
@@ -104,6 +129,27 @@ func DeriveED25519PublicKey(priv []byte) (string, error) {
 	return base64.StdEncoding.EncodeToString(pub), nil
 }
 
+// DeriveMLDSA44PublicKey computes the MLDSA-44 public key from the private key.
+func DeriveMLDSA44PublicKey(priv []byte) (string, error) {
+	block, _ := pem.Decode(priv)
+	if block == nil || block.Type != PrivateKeyPEMType {
+		return "", fmt.Errorf("failed to decode PEM block containing MLDSA-44 private key")
+	}
+	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return "", err
+	}
+	privKey, ok := key.(*mldsa.PrivateKey)
+	if !ok {
+		return "", fmt.Errorf("not an MLDSA-44 private key")
+	}
+	pub, err := x509.MarshalPKIXPublicKey(privKey.PublicKey())
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(pub), nil
+}
+
 // GenTXTValue generates the DKIM record for the given public key.
 func GenTXTValue(pub string, keyType KeyType) string {
 	res := []string{}
@@ -112,6 +158,8 @@ func GenTXTValue(pub string, keyType KeyType) string {
 	case KeyTypeRSA:
 		res = append(res, fmt.Sprintf("\"v=DKIM1; h=sha256; k=%s;\"", keyType))
 	case KeyTypeED25519:
+		res = append(res, fmt.Sprintf("\"v=DKIM1; k=%s;\"", keyType))
+	case KeyTypeMLDSA44:
 		res = append(res, fmt.Sprintf("\"v=DKIM1; k=%s;\"", keyType))
 	default:
 		return ""

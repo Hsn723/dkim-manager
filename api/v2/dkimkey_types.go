@@ -43,7 +43,7 @@ type DKIMKeySpec struct {
 	// KeyLength represents the bit size for RSA keys.
 	KeyLength dkim.KeyLength `json:"keyLength,omitempty"`
 
-	// +kubebuilder:validation:Enum=rsa;ed25519
+	// +kubebuilder:validation:Enum=rsa;ed25519;mldsa44
 	// +kubebuilder:default=rsa
 
 	// KeyType represents the DKIM key type.
