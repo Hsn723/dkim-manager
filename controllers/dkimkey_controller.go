@@ -200,7 +200,13 @@ func (r *DKIMKeyReconciler) reconcile(ctx context.Context, dk *dkimmanagerv2.DKI
 			r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonFailed, fmt.Sprintf("Failed to reconcile Secret: %v", err))
 			return ctrl.Result{}, r.Status().Update(ctx, dk)
 		}
-		targets = []string{dkim.GenTXTValue(pub, dk.Spec.KeyType)}
+		kp, err := dkim.NewKeyProvider(dk.Spec.KeyType, dk.Spec.KeyLength)
+		if err != nil {
+			logger.Error(err, "failed to create key provider")
+			r.setCondition(dk, dkimmanagerv2.ConditionReady, v1.ConditionFalse, dkimmanagerv2.ReasonInvalid, err.Error())
+			return ctrl.Result{}, r.Status().Update(ctx, dk)
+		}
+		targets = []string{dkim.GenTXTValue(kp, pub)}
 	}
 	if err := r.reconcileDKIMRecord(ctx, dk, targets); err != nil {
 		logger.Error(err, "failed to reconcile DNSEndpoint")
@@ -213,21 +219,22 @@ func (r *DKIMKeyReconciler) reconcile(ctx context.Context, dk *dkimmanagerv2.DKI
 }
 
 func (r DKIMKeyReconciler) generateKeyPair(dk *dkimmanagerv2.DKIMKey) (key []byte, pub, reason string, err error) {
-	switch dk.Spec.KeyType {
-	case dkim.KeyTypeRSA:
-		key, pub, err = dkim.GenRSA(dk.Spec.KeyLength)
-	case dkim.KeyTypeED25519:
-		key, pub, err = dkim.GenED25519()
-	case dkim.KeyTypeMLDSA44:
-		key, pub, err = dkim.GenMLDSA44()
-	default:
+	kp, err := dkim.NewKeyProvider(dk.Spec.KeyType, dk.Spec.KeyLength)
+	if err != nil {
 		reason = dkimmanagerv2.ReasonInvalid
-		err = fmt.Errorf("invalid key type specified")
+		err = fmt.Errorf("failed to create key provider: %v", err)
 		return
 	}
+	key, err = kp.GenKey()
 	if err != nil {
 		reason = dkimmanagerv2.ReasonFailed
 		err = fmt.Errorf("failed to generate key: %v", err)
+		return
+	}
+	pub, err = kp.PublicKey(key)
+	if err != nil {
+		reason = dkimmanagerv2.ReasonFailed
+		err = fmt.Errorf("failed to derive public key: %v", err)
 		return
 	}
 	return
@@ -254,20 +261,15 @@ func (r *DKIMKeyReconciler) checkForExistingKey(ctx context.Context, dk *dkimman
 		return nil, fmt.Errorf("private key not found in Secret")
 	}
 	var pub string
-	switch dk.Spec.KeyType {
-	case dkim.KeyTypeRSA:
-		pub, err = dkim.DeriveRSAPublicKey(priv, dk.Spec.KeyLength)
-	case dkim.KeyTypeED25519:
-		pub, err = dkim.DeriveED25519PublicKey(priv)
-	case dkim.KeyTypeMLDSA44:
-		pub, err = dkim.DeriveMLDSA44PublicKey(priv)
-	default:
-		return nil, fmt.Errorf("invalid key type specified")
+	kp, err := dkim.NewKeyProvider(dk.Spec.KeyType, dk.Spec.KeyLength)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create key provider: %v", err)
 	}
+	pub, err = kp.PublicKey(priv)
 	if err != nil {
 		return nil, fmt.Errorf("failed to derive public key: %v", err)
 	}
-	targets = []string{dkim.GenTXTValue(pub, dk.Spec.KeyType)}
+	targets = []string{dkim.GenTXTValue(kp, pub)}
 	return targets, nil
 }
 
