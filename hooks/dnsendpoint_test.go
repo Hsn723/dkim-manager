@@ -2,8 +2,8 @@ package hooks
 
 import (
 	"context"
+	"uuid"
 
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -17,8 +17,8 @@ var _ = Describe("DNSEndpoint webhook", func() {
 	ctx := context.Background()
 
 	It("should allow deleting ordinary DNSEndpoints", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		shouldCreateNamespace(ctx, namespace)
 
 		By("creating DNSEndpoint")
@@ -48,8 +48,8 @@ var _ = Describe("DNSEndpoint webhook", func() {
 	})
 
 	It("should prevent deleting owned DNSEndpoints", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		shouldCreateNamespace(ctx, namespace)
 		shouldCreateDKIMKey(ctx, name, namespace, dummyDKIMKeySpec(name))
 

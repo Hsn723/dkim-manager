@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"uuid"
 
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -27,7 +27,7 @@ var (
 
 var _ = Describe("dkim-manager", func() {
 	It("should generate resources", func() {
-		namespace := uuid.NewString()
+		namespace := uuid.New().String()
 
 		By("creating namespace")
 		kubectlSafe(nil, "create", "ns", namespace)
@@ -99,7 +99,7 @@ var _ = Describe("dkim-manager", func() {
 	})
 
 	It("should delete resources", func() {
-		namespace := uuid.NewString()
+		namespace := uuid.New().String()
 
 		By("creating namespace")
 		kubectlSafe(nil, "create", "ns", namespace)
@@ -132,7 +132,7 @@ var _ = Describe("dkim-manager", func() {
 	})
 
 	It("should prevent user deletion of generated resources", func() {
-		namespace := uuid.NewString()
+		namespace := uuid.New().String()
 
 		By("creating namespace")
 		kubectlSafe(nil, "create", "ns", namespace)
@@ -160,7 +160,7 @@ var _ = Describe("dkim-manager", func() {
 	})
 
 	It("should not delete resources owned by another DKIMKey", func() {
-		namespace := uuid.NewString()
+		namespace := uuid.New().String()
 
 		By("creating namespace")
 		kubectlSafe(nil, "create", "ns", namespace)

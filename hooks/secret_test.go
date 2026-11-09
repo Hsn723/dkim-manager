@@ -2,8 +2,8 @@ package hooks
 
 import (
 	"context"
+	"uuid"
 
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -17,8 +17,8 @@ var _ = Describe("Secret webhook", func() {
 	ctx := context.Background()
 
 	It("should allow deleting ordinary Secrets", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		shouldCreateNamespace(ctx, namespace)
 
 		By("creating Secret")
@@ -41,8 +41,8 @@ var _ = Describe("Secret webhook", func() {
 	})
 
 	It("should prevent deleting owned Secrets", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		shouldCreateNamespace(ctx, namespace)
 		shouldCreateDKIMKey(ctx, name, namespace, dummyDKIMKeySpec(name))
 

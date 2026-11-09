@@ -2,8 +2,8 @@ package hooks
 
 import (
 	"context"
+	"uuid"
 
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,14 +36,14 @@ var _ = Describe("DKIMKey v1 webhook", func() {
 			title: "should deny changing name",
 			mutator: func(dk *dkimmanagerv1.DKIMKey) {
 				By("changing name")
-				dk.SetName(uuid.NewString())
+				dk.SetName(uuid.New().String())
 			},
 		},
 		{
 			title: "should deny changing secretName",
 			mutator: func(dk *dkimmanagerv1.DKIMKey) {
 				By("changing spec")
-				dk.Spec.SecretName = uuid.NewString()
+				dk.Spec.SecretName = uuid.New().String()
 			},
 		},
 		{
@@ -85,8 +85,8 @@ var _ = Describe("DKIMKey v1 webhook", func() {
 	}
 	for _, c := range cases {
 		It(c.title, func() {
-			name := uuid.NewString()
-			namespace := uuid.NewString()
+			name := uuid.New().String()
+			namespace := uuid.New().String()
 			shouldCreateNamespace(ctx, namespace)
 			shouldCreateV1DKIMKey(ctx, name, namespace, dummyV1DKIMKeySpec(name))
 
@@ -132,14 +132,14 @@ var _ = Describe("DKIMKey v2 webhook", func() {
 			title: "should deny changing name",
 			mutator: func(dk *dkimmanagerv2.DKIMKey) {
 				By("changing name")
-				dk.SetName(uuid.NewString())
+				dk.SetName(uuid.New().String())
 			},
 		},
 		{
 			title: "should deny changing secretName",
 			mutator: func(dk *dkimmanagerv2.DKIMKey) {
 				By("changing spec")
-				dk.Spec.SecretName = uuid.NewString()
+				dk.Spec.SecretName = uuid.New().String()
 			},
 		},
 		{
@@ -181,8 +181,8 @@ var _ = Describe("DKIMKey v2 webhook", func() {
 	}
 	for _, c := range cases {
 		It(c.title, func() {
-			name := uuid.NewString()
-			namespace := uuid.NewString()
+			name := uuid.New().String()
+			namespace := uuid.New().String()
 			shouldCreateNamespace(ctx, namespace)
 			shouldCreateDKIMKey(ctx, name, namespace, dummyDKIMKeySpec(name))
 
