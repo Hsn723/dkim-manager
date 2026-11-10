@@ -136,6 +136,36 @@
       "algorithm": "sha256"
     },
     {
+      "id": "http/dl.k8s.io/v1.37.2/bin/darwin/amd64/kubectl",
+      "checksum": "88379AFF5C8111DE6BE0A394ADFFBA2819E44CDE269F3AB23CEF76DE1A48EAA8",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "http/dl.k8s.io/v1.37.2/bin/darwin/arm64/kubectl",
+      "checksum": "55701AF0D51815EE335F240E48ACF0959C3C23017ED3FA816E880C4A92BAE581",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "http/dl.k8s.io/v1.37.2/bin/linux/amd64/kubectl",
+      "checksum": "C04487523E7AA7D1493F7808174C899DB93D7A9CF57531420CD76B9BD415F8F4",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "http/dl.k8s.io/v1.37.2/bin/linux/arm64/kubectl",
+      "checksum": "FCC16F63186659D9722014B7E02D5FDD2D4E669CB8C0AB66365D7D3B8BA03509",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "http/dl.k8s.io/v1.37.2/bin/windows/amd64/kubectl.exe",
+      "checksum": "1691938F7DE0E931969F9968C3601CF32D6B0D573573AFB4CE471F3D28F51984",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "http/dl.k8s.io/v1.37.2/bin/windows/arm64/kubectl.exe",
+      "checksum": "0F5965E47E4D864CF3409D8A744560B335A7C8244D0CAB25E5BBBA38738EF9AE",
+      "algorithm": "sha256"
+    },
+    {
       "id": "http/get.helm.sh/helm-v4.2.0-darwin-amd64.tar.gz",
       "checksum": "1376EA697140E4DB316736E760D5A47D12AFC1524DCE704476EF06FD7FDEDDC6",
       "algorithm": "sha256"

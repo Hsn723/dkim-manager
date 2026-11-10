@@ -2,14 +2,14 @@ include ../Makefile.common
 
 PROJECT_NAME = dkim-manager
 CERT_MANAGER_VERSION = 1.20.2
-KUBERNETES_VERSION = $(shell curl --retry 3 --retry-all-errors -L -s https://dl.k8s.io/release/stable.txt)
+TARGETOS ?= linux
+TARGETARCH ?= $(shell go env GOARCH)
+TARGETPLATFORM ?= $(TARGETOS)/$(TARGETARCH)
 KIND_NODE_TAG = ""
 
-BINDIR = $(dir $(shell pwd))/bin/
-KUBECTL = $(BINDIR)/kubectl
 KIND_CONFIG = kind-config.yaml
 KUBECONFIG = $(shell pwd)/.kubeconfig
-export KUBECTL KUBECONFIG
+export KUBECONFIG
 
 .PHONY: start-kind
 start-kind:
@@ -17,24 +17,24 @@ start-kind:
 
 .PHONY: deploy
 deploy:
-	cd ..; mkdir -p linux/amd64; CGO_ENABLED=0 go build -o linux/amd64/dkim-manager -ldflags="-w -s" cmd/dkim-manager/main.go
+	cd ..; mkdir -p $(TARGETPLATFORM); CGO_ENABLED=0 go build -o $(TARGETPLATFORM)/$(PROJECT_NAME) -ldflags="-w -s" cmd/dkim-manager/main.go
 	cd ..; docker build --no-cache -t $(PROJECT_NAME):dev .
 	kind load docker-image $(PROJECT_NAME):dev --name=$(PROJECT_NAME)
 
 .PHONY: bootstrap
 bootstrap: init-aqua
-	$(KUBECTL) apply -f https://github.com/jetstack/cert-manager/releases/download/v$(CERT_MANAGER_VERSION)/cert-manager.yaml
-	$(KUBECTL) -n cert-manager wait --for=condition=available --timeout=180s --all deployments
+	kubectl apply -f https://github.com/jetstack/cert-manager/releases/download/v$(CERT_MANAGER_VERSION)/cert-manager.yaml
+	kubectl -n cert-manager wait --for=condition=available --timeout=180s --all deployments
 	helm install --create-namespace --namespace $(PROJECT_NAME) $(PROJECT_NAME) ../charts/$(PROJECT_NAME) -f values.yaml
-	$(KUBECTL) -n $(PROJECT_NAME) wait --for=condition=available --timeout=180s --all deployments
-	$(KUBECTL) apply -f ../config/crd/third-party/dnsendpoint.yaml
+	kubectl -n $(PROJECT_NAME) wait --for=condition=available --timeout=180s --all deployments
+	kubectl apply -f ../config/crd/third-party/dnsendpoint.yaml
 
 .PHONY: start
-start: init-aqua $(KUBECTL) crds start-kind deploy bootstrap
+start: init-aqua crds start-kind deploy bootstrap
 
 .PHONY: test
 test:
-	env PATH="$$(pwd)/../bin:$$PATH" RUN_E2E=1 \
+	env RUN_E2E=1 \
 		go test -v -race . -ginkgo.v -ginkgo.fail-fast
 
 .PHONY: stop
@@ -49,11 +49,6 @@ crds:
 
 $(HELM):
 	$(MAKE) -C .. helm
-
-$(KUBECTL):
-	mkdir -p ../bin
-	curl --retry 3 --retry-all-errors -sfL -o $@ https://dl.k8s.io/release/$(KUBERNETES_VERSION)/bin/linux/amd64/kubectl
-	chmod a+x $@
 
 .PHONY: get-k8s-versions
 get-k8s-versions:
