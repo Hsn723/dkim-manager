@@ -2,6 +2,7 @@ package dkim
 
 import (
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
@@ -11,9 +12,6 @@ import (
 	"strings"
 )
 
-type KeyLength uint
-type KeyType string
-
 const (
 	KeyLength1024 KeyLength = 1024
 	KeyLength2048 KeyLength = 2048
@@ -21,50 +19,47 @@ const (
 
 	KeyTypeRSA     KeyType = "rsa"
 	KeyTypeED25519 KeyType = "ed25519"
+	KeyTypeMLDSA44 KeyType = "mldsa44"
+
+	PrivateKeyPEMType = "PRIVATE KEY"
 )
 
-// GenRSA generates an RSA key pair.
-func GenRSA(size KeyLength) ([]byte, string, error) {
-	privateKey, err := rsa.GenerateKey(rand.Reader, int(size))
+type KeyLength uint
+type KeyType string
+
+// KeyProvider is an interface for generating DKIM keys and their corresponding public keys.
+type KeyProvider interface {
+	Name() KeyType
+	GenKey() ([]byte, error)
+	PublicKey([]byte) (string, error)
+}
+
+// RSAKeyProvider is a KeyProvider that generates RSA keys.
+type RSAKeyProvider struct {
+	Size KeyLength
+}
+
+// Name returns the name of the key type.
+func (r *RSAKeyProvider) Name() KeyType {
+	return KeyTypeRSA
+}
+
+// GenKey generates an RSA private key.
+func (r *RSAKeyProvider) GenKey() ([]byte, error) {
+	privateKey, err := rsa.GenerateKey(rand.Reader, int(r.Size))
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	key := pem.EncodeToMemory(&pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	})
-
-	pub, err := x509.MarshalPKIXPublicKey(privateKey.Public().(*rsa.PublicKey))
-	if err != nil {
-		return nil, "", err
-	}
-	return key, base64.StdEncoding.EncodeToString(pub), nil
+	return key, err
 }
 
-// GenED25519 generates an ed25519 key pair.
-func GenED25519() ([]byte, string, error) {
-	pubKey, privKey, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		return nil, "", err
-	}
-	bytes, err := x509.MarshalPKCS8PrivateKey(privKey)
-	if err != nil {
-		return nil, "", err
-	}
-	key := pem.EncodeToMemory(&pem.Block{
-		Type:  "PRIVATE KEY",
-		Bytes: bytes,
-	})
-	pub, err := x509.MarshalPKIXPublicKey(pubKey)
-	if err != nil {
-		return nil, "", err
-	}
-	return key, base64.StdEncoding.EncodeToString(pub), nil
-}
-
-// DeriveRSAPublicKey computes the RSA public key from the private key.
-func DeriveRSAPublicKey(priv []byte, size KeyLength) (string, error) {
+// PublicKey derives the RSA public key from the given private key.
+func (r *RSAKeyProvider) PublicKey(priv []byte) (string, error) {
 	block, _ := pem.Decode(priv)
 	if block == nil || block.Type != "RSA PRIVATE KEY" {
 		return "", fmt.Errorf("failed to decode PEM block containing RSA private key")
@@ -73,20 +68,41 @@ func DeriveRSAPublicKey(priv []byte, size KeyLength) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if s := privateKey.N.BitLen(); s != int(size) {
-		return "", fmt.Errorf("key size mismatch: expected %d bits, got %d bits", size, s)
+	if s := privateKey.N.BitLen(); s != int(r.Size) {
+		return "", fmt.Errorf("key size mismatch: expected %d bits, got %d bits", r.Size, s)
 	}
-	pub, err := x509.MarshalPKIXPublicKey(privateKey.Public().(*rsa.PublicKey))
+	pub, err := x509.MarshalPKIXPublicKey(privateKey.Public())
 	if err != nil {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(pub), nil
 }
 
-// DeriveED25519PublicKey computes the ed25519 public key from the private key.
-func DeriveED25519PublicKey(priv []byte) (string, error) {
+type ED25519KeyProvider struct{}
+
+func (e *ED25519KeyProvider) Name() KeyType {
+	return KeyTypeED25519
+}
+
+func (e *ED25519KeyProvider) GenKey() ([]byte, error) {
+	_, privKey, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := x509.MarshalPKCS8PrivateKey(privKey)
+	if err != nil {
+		return nil, err
+	}
+	key := pem.EncodeToMemory(&pem.Block{
+		Type:  PrivateKeyPEMType,
+		Bytes: bytes,
+	})
+	return key, nil
+}
+
+func (e *ED25519KeyProvider) PublicKey(priv []byte) (string, error) {
 	block, _ := pem.Decode(priv)
-	if block == nil || block.Type != "PRIVATE KEY" {
+	if block == nil || block.Type != PrivateKeyPEMType {
 		return "", fmt.Errorf("failed to decode PEM block containing ed25519 private key")
 	}
 	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
@@ -97,28 +113,73 @@ func DeriveED25519PublicKey(priv []byte) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("not an ed25519 private key")
 	}
-	pub, err := x509.MarshalPKIXPublicKey(privKey.Public().(ed25519.PublicKey))
+	pub, err := x509.MarshalPKIXPublicKey(privKey.Public())
 	if err != nil {
 		return "", err
 	}
 	return base64.StdEncoding.EncodeToString(pub), nil
 }
 
-// GenTXTValue generates the DKIM record for the given public key.
-func GenTXTValue(pub string, keyType KeyType) string {
-	res := []string{}
-	p := fmt.Sprintf("p=%s", pub)
+type MLDSA44KeyProvider struct{}
+
+func (m *MLDSA44KeyProvider) Name() KeyType {
+	return KeyTypeMLDSA44
+}
+
+func (m *MLDSA44KeyProvider) GenKey() ([]byte, error) {
+	privKey, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	if err != nil {
+		return nil, err
+	}
+	bytes, err := x509.MarshalPKCS8PrivateKey(privKey)
+	if err != nil {
+		return nil, err
+	}
+	key := pem.EncodeToMemory(&pem.Block{
+		Type:  PrivateKeyPEMType,
+		Bytes: bytes,
+	})
+	return key, nil
+}
+
+func (m *MLDSA44KeyProvider) PublicKey(priv []byte) (string, error) {
+	block, _ := pem.Decode(priv)
+	if block == nil || block.Type != PrivateKeyPEMType {
+		return "", fmt.Errorf("failed to decode PEM block containing MLDSA-44 private key")
+	}
+	key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
+	if err != nil {
+		return "", err
+	}
+	privKey, ok := key.(*mldsa.PrivateKey)
+	if !ok {
+		return "", fmt.Errorf("not an MLDSA-44 private key")
+	}
+	pub, err := x509.MarshalPKIXPublicKey(privKey.PublicKey())
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString(pub), nil
+}
+
+func NewKeyProvider(keyType KeyType, size KeyLength) (KeyProvider, error) {
 	switch keyType {
 	case KeyTypeRSA:
-		res = append(res, fmt.Sprintf("\"v=DKIM1; h=sha256; k=%s;\"", keyType))
+		return &RSAKeyProvider{Size: size}, nil
 	case KeyTypeED25519:
-		res = append(res, fmt.Sprintf("\"v=DKIM1; k=%s;\"", keyType))
+		return &ED25519KeyProvider{}, nil
+	case KeyTypeMLDSA44:
+		return &MLDSA44KeyProvider{}, nil
 	default:
-		return ""
+		return nil, fmt.Errorf("unsupported key type: %s", keyType)
 	}
+}
 
+func GenTXTValue(kp KeyProvider, pub string) string {
+	res := []string{}
+	p := fmt.Sprintf("p=%s", pub)
+	res = append(res, fmt.Sprintf("\"v=DKIM1; k=%s;\"", kp.Name()))
 	res = append(res, splitKey(p)...)
-
 	return strings.Join(res, " ")
 }
 

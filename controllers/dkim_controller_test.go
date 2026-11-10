@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"time"
+	"uuid"
 
-	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -90,8 +90,8 @@ var _ = Describe("DKIMKey controller", func() {
 	})
 
 	It("should create DNSEndpoint and Secret", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		shouldCreateNamespace(ctx, namespace)
 
 		By("creating DKIMKey")
@@ -132,8 +132,8 @@ var _ = Describe("DKIMKey controller", func() {
 	})
 
 	It("should allow existing DNSEndpoint with no public keys", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		shouldCreateNamespace(ctx, namespace)
 
 		By("creating dummy DNSEndpoint")
@@ -199,8 +199,8 @@ var _ = Describe("DKIMKey controller", func() {
 	})
 
 	It("should allow changing DKIMKey spec when DNSEndpoint already exists with the same public key", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		shouldCreateNamespace(ctx, namespace)
 
 		By("creating DKIMKey")
@@ -275,8 +275,8 @@ var _ = Describe("DKIMKey controller", func() {
 	})
 
 	It("should give up early when Secret already exists", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		shouldCreateNamespace(ctx, namespace)
 
 		By("creating dummy Secret")
@@ -325,9 +325,9 @@ var _ = Describe("DKIMKey controller", func() {
 	})
 
 	It("should cascade delete generated resources", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
-		userSecret := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
+		userSecret := uuid.New().String()
 		err := k8sClient.Create(ctx, &corev1.Namespace{
 			ObjectMeta: v1.ObjectMeta{Name: namespace},
 		})
@@ -385,9 +385,9 @@ var _ = Describe("DKIMKey controller", func() {
 	})
 
 	It("should cascade delete owned generated resources", func() {
-		dk1Name := uuid.NewString()
-		dk2Name := uuid.NewString()
-		namespace := uuid.NewString()
+		dk1Name := uuid.New().String()
+		dk2Name := uuid.New().String()
+		namespace := uuid.New().String()
 		err := k8sClient.Create(ctx, &corev1.Namespace{
 			ObjectMeta: v1.ObjectMeta{Name: namespace},
 		})
@@ -466,7 +466,7 @@ var _ = Describe("DKIMKey controller", func() {
 var _ = Describe("DKIMKey controller namespaced", func() {
 	ctx := context.Background()
 	var stopFunc func()
-	observedNamespace := uuid.NewString()
+	observedNamespace := uuid.New().String()
 
 	BeforeEach(func() {
 		mgr, err := ctrl.NewManager(cfg, ctrl.Options{
@@ -505,7 +505,7 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 	})
 
 	It("should reconcile resources in watched namespace", func() {
-		name := uuid.NewString()
+		name := uuid.New().String()
 		namespace := observedNamespace
 		err := k8sClient.Create(ctx, &corev1.Namespace{
 			ObjectMeta: v1.ObjectMeta{Name: namespace},
@@ -550,8 +550,8 @@ var _ = Describe("DKIMKey controller namespaced", func() {
 	})
 
 	It("should ignore resources in invalid namespaces", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		err := k8sClient.Create(ctx, &corev1.Namespace{
 			ObjectMeta: v1.ObjectMeta{Name: namespace},
 		})
@@ -627,8 +627,8 @@ var _ = Describe("DKIMKey v1/v2 conversion", func() {
 	})
 
 	It("should reconcile a DKIMKey created via v1 API", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		shouldCreateNamespace(ctx, namespace)
 
 		By("creating DKIMKey via v1 API")
@@ -684,8 +684,8 @@ var _ = Describe("DKIMKey v1/v2 conversion", func() {
 	})
 
 	It("should show correct v1 status for a DKIMKey created via v2 API", func() {
-		name := uuid.NewString()
-		namespace := uuid.NewString()
+		name := uuid.New().String()
+		namespace := uuid.New().String()
 		shouldCreateNamespace(ctx, namespace)
 
 		By("creating DKIMKey via v2 API")
