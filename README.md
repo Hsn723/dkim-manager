@@ -17,7 +17,7 @@ When sending mail from inside a Kubernetes cluster, you might want to sign outgo
 
 - a `Secret` containing the private key, that the mailer pod can mount and consume
 - a `DNSEndpoint` containing the public key and other necessary information for `external-dns` to create the DNS record
-- RSA (1024-bit, 2048-bit, 4096-bit) and ed25519 keys are supported
+- RSA (1024-bit, 2048-bit, 4096-bit), ed25519 and MLDSA44 keys are supported
     - 2048-bit RSA is selected as a sensible default
 
 It is recommended to create a delegated subdomain for the sole purpose of storing DKIM records (eg: `dkim.example.com`) and grant `external-dns` only permission on that subdomain. See [this blog](https://atelierhsn.com/2022/01/cert-manager-done-right/) for more details why.
