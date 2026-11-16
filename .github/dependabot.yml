@@ -33,6 +33,10 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    groups:
+      internal:
+        patterns:
+          - "hsn723/actions/*"
     cooldown:
       default-days: 3
       exclude:
